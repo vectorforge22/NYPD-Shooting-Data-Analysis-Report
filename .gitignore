@@ -14,8 +14,9 @@ data/
 *.knit.md
 *.utf8.md
 *.tex
+!reports/source/report-preamble.tex
 *.log
-report/source/report-figures/
+reports/source/report-figures/
 
 # Operating-system files
 .DS_Store
@@ -23,4 +24,3 @@ Thumbs.db
 ~$*
 *.tmp
 *.bak
-

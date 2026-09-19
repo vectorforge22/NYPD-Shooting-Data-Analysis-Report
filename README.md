@@ -6,18 +6,18 @@ The project began as graduate coursework and was rebuilt as an independent publi
 
 ## Read the report
 
-- `report/NYPD_Shooting_Incidents_Publication_Edition.pdf` - fixed-layout publication edition
-- `report/source/NYPDShootingDataReport_Rebuilt.Rmd` - maintained report source
-- `analysis/results/ANALYSIS_FINDINGS.md` - compact evidence summary
+- `reports/rendered/NYPD_Shooting_Incidents_Publication_Edition.pdf` - fixed-layout publication edition
+- `reports/source/NYPDShootingDataReport_Rebuilt.Rmd` - maintained report source
+- `analysis/revamp/results/ANALYSIS_FINDINGS.md` - compact evidence summary
 
 The reflowable Kindle edition is being finalized separately. Versioned PDF and EPUB downloads should be attached to GitHub Releases once the final Kindle v3 files are approved.
 
 ## Repository layout
 
-- `analysis/` - acquisition, validation, repaired analysis, tests, and published result tables
-- `report/source/` - R Markdown source, theme, data-loading layer, Kindle stylesheet, and PDF preamble
-- `report/` - visually reviewed fixed-layout PDF
-- `scripts/` - report rendering entry points
+- `analysis/revamp/` - acquisition, validation, repaired analysis, tests, and published result tables
+- `reports/source/` - R Markdown source, theme, data-loading layer, Kindle stylesheet, and PDF preamble
+- `reports/rendered/` - visually reviewed fixed-layout PDF
+- `reports/scripts/` - report rendering entry points
 - `assets/` - publication cover
 - `REPRODUCIBILITY.md` - environment, data, and verification instructions
 - `NOTICE.md` - authorship, institutional, data-source, AI, and licensing boundaries
@@ -41,4 +41,3 @@ Open an issue identifying the edition date, affected claim or figure, and suppor
 ## Status
 
 The fixed-layout report is publication-ready. The Kindle v3 package remains in owner review and should not be represented as final until its KPF has passed the manual device-preview checklist.
-

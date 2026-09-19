@@ -10,31 +10,31 @@ Use Python 3.12 and install the pinned analysis requirements:
 
 ```powershell
 py -3.12 -m venv .venv
-& .\.venv\Scripts\python.exe -m pip install -r analysis\requirements.txt
+& .\.venv\Scripts\python.exe -m pip install -r analysis\revamp\requirements.txt
 ```
 
 Acquire the official and contextual inputs from the repository root:
 
 ```powershell
-& .\.venv\Scripts\python.exe analysis\acquire_data.py
-& .\.venv\Scripts\python.exe analysis\acquire_spatial_data.py
-& .\.venv\Scripts\python.exe analysis\acquire_contextual_data.py
+& .\.venv\Scripts\python.exe analysis\revamp\acquire_data.py
+& .\.venv\Scripts\python.exe analysis\revamp\acquire_spatial_data.py
+& .\.venv\Scripts\python.exe analysis\revamp\acquire_contextual_data.py
 ```
 
 Run the maintained analysis and tests:
 
 ```powershell
-& .\.venv\Scripts\python.exe analysis\run_analysis.py
-& .\.venv\Scripts\python.exe -m unittest analysis\test_analysis.py
+& .\.venv\Scripts\python.exe analysis\revamp\run_analysis.py
+& .\.venv\Scripts\python.exe -m unittest analysis\revamp\test_analysis.py
 ```
 
-The publication baseline passes 25 tests. `analysis/results/` contains the report's evidence layer, including unit reconciliation, annual and year-to-date counts, spatial and contextual analyses, forecast evaluation, and audit records.
+The publication baseline passes 25 tests. `analysis/revamp/results/` contains the report's evidence layer, including unit reconciliation, annual and year-to-date counts, spatial and contextual analyses, forecast evaluation, and audit records.
 
 ## Report rendering
 
-The report source is `report/source/NYPDShootingDataReport_Rebuilt.Rmd`. The private production checkout pins R, R packages, Pandoc, XeLaTeX, and supporting tools. This public repository records the source and entry-point scripts but does not duplicate the complete local toolchain.
+The report source is `reports/source/NYPDShootingDataReport_Rebuilt.Rmd`. The private production checkout pins R, R packages, Pandoc, XeLaTeX, and supporting tools. This public repository records the source and entry-point scripts but does not duplicate the complete local toolchain.
 
-From a compatible R environment with the required packages and Pandoc/XeLaTeX available, adapt the project-root paths in `scripts/render_pdf_report.R` and render the report. The published PDF is included so readers can inspect the exact fixed-layout edition without reconstructing the toolchain.
+From a compatible R environment with the required packages and Pandoc/XeLaTeX available, use the entry points under `reports/scripts/`. The published PDF is included so readers can inspect the exact fixed-layout edition without reconstructing the toolchain.
 
 ## Data boundaries
 
@@ -49,4 +49,3 @@ From a compatible R environment with the required packages and Pandoc/XeLaTeX av
 - 25 maintained analysis tests passed.
 - The 42-page PDF was rendered to page images and every page was visually reviewed.
 - The corrected PDF contains the current public repository address and the original course-report date.
-
