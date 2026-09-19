@@ -1,0 +1,7 @@
+entity,field,total_records,missing_or_unknown_count,missing_or_unknown_share,invalid_recorded_value_count,invalid_recorded_value_share
+victim,age_group,29129,60,0.0020598029455182122,1,3.43300490919702e-05
+victim,recorded_sex,29129,12,0.0004119605891036424,0,0.0
+victim,recorded_race,29129,65,0.0022314531909780632,0,0.0
+offender,age_group,19047,3394,0.17819079120071402,6,0.00031501023783272954
+offender,recorded_sex,19047,1395,0.07323988029610963,0,0.0
+offender,recorded_race,19047,1749,0.09182548432824067,0,0.0

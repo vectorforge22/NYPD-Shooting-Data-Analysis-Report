@@ -1,0 +1,79 @@
+{
+  "contextual_snapshot": {
+    "analysis_boundary": "2006-01-01 through 2025-12-31",
+    "files": {
+      "holidays": {
+        "path": "data/external/contextual/us_federal_holidays_2006_2025.csv",
+        "rows": 205,
+        "sha256": "832f27e9924197d09db0bb7f524b9e7f677b1bf7c3830419b549b9cfee877a2f"
+      },
+      "political_events": {
+        "path": "data/external/contextual/nyc_political_crowds_2017_2025.csv",
+        "rows": 15016,
+        "sha256": "69b1dc94ed89055752a848241a03b9bb924dbbd3bec6583deb6060f65f29d651"
+      },
+      "sports": {
+        "path": "data/external/contextual/championship_games_2006_2025.csv",
+        "rows": 249,
+        "sha256": "81fe093e55b3b162d3e90f58e7efb2ee46ffe252be99f2304819eb15b85663c1"
+      },
+      "weather": {
+        "path": "data/external/contextual/central_park_weather_2006_2025.csv",
+        "rows": 7305,
+        "sha256": "65acb169105af885ee93f07351fb3e265426da531108c4c590a972ab827bcea6"
+      }
+    },
+    "retrieved_at_utc": "2026-09-17T14:21:36.894875+00:00"
+  },
+  "current_snapshot": {
+    "date_max": "2026-06-30",
+    "date_min": "2006-01-01",
+    "latest_complete_year": 2025
+  },
+  "legacy_snapshot": {
+    "date_max": "2023-12-29",
+    "date_min": "2006-01-01",
+    "exact_duplicates_removed": 0,
+    "maximum_rows_per_incident": 18,
+    "raw_rows": 28562,
+    "repeated_incident_rows": 6168,
+    "rows": 28562,
+    "unique_incident_keys": 22394
+  },
+  "offenders": {
+    "clean_rows": 19047,
+    "exact_duplicates_removed": 116,
+    "orphan_incident_keys": 1,
+    "orphan_rows": 2,
+    "raw_rows": 19163,
+    "unique_offender_ids": 19047
+  },
+  "runtime": {
+    "forecast_verdict": "dynamic_count_ensemble_preferred",
+    "numpy": "2.3.3",
+    "pandas": "2.3.2",
+    "prophet_requested": true,
+    "python": "3.12.14"
+  },
+  "shootings": {
+    "clean_rows": 24310,
+    "coordinate_status": {
+      "as_published": 321,
+      "reversed_in_export": 23988,
+      "unresolved": 1
+    },
+    "duplicate_incident_keys": 0,
+    "exact_duplicates_removed": 0,
+    "invalid_occurrence_hours": 0,
+    "raw_rows": 24310,
+    "unique_incident_keys": 24310
+  },
+  "victims": {
+    "clean_rows": 29129,
+    "exact_duplicates_removed": 164,
+    "orphan_incident_keys": 2,
+    "orphan_rows": 2,
+    "raw_rows": 29293,
+    "unique_victim_ids": 29128
+  }
+}

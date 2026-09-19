@@ -1,0 +1,4 @@
+numpy==2.3.3
+pandas==2.3.2
+cmdstanpy==1.2.5
+prophet==1.1.7

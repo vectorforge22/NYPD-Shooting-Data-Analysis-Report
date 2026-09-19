@@ -1,0 +1,26 @@
+# Local environments and editor state
+.venv/
+.Rproj.user/
+.Rhistory
+.RData
+__pycache__/
+*.py[cod]
+
+# Raw and downloaded data
+data/
+
+# Report build products
+*_files/
+*.knit.md
+*.utf8.md
+*.tex
+*.log
+report/source/report-figures/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+~$*
+*.tmp
+*.bak
+

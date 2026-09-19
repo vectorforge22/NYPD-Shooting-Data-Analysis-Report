@@ -1,0 +1,49 @@
+field,value,status,count,share_of_records
+inside_outside,OUTSIDE,recorded,3471,0.7514613552717039
+inside_outside,INSIDE,recorded,1148,0.24853864472829618
+location_classification,STREET,recorded,2475,0.5358302662914051
+location_classification,HOUSING,recorded,792,0.17146568521324962
+location_classification,DWELLING,recorded,739,0.1599913401169084
+location_classification,COMMERCIAL,recorded,269,0.05823771379086382
+location_classification,VEHICLE,recorded,188,0.04070145053041784
+location_classification,PLAYGROUND,recorded,67,0.014505304178393592
+location_classification,OTHER,recorded,29,0.006278415241394241
+location_classification,PARKING LOT,recorded,23,0.0049794327776575015
+location_classification,TRANSIT,recorded,18,0.0038969473912102187
+location_classification,TAXI/LIVERY,recorded,14,0.0030309590820523924
+location_classification,Unknown or missing,missing_or_unknown,5,0.001082485386447283
+detailed_location,Unknown or missing,missing_or_unknown,2445,0.5293353539727214
+detailed_location,MULTI DWELL - PUBLIC HOUS,recorded,777,0.16821822905390776
+detailed_location,MULTI DWELL - APT BUILD,recorded,678,0.14678501840225158
+detailed_location,PVT HOUSE,recorded,267,0.05780471963628491
+detailed_location,GROCERY/BODEGA,recorded,127,0.027495128815760987
+detailed_location,BAR/NIGHT CLUB,recorded,96,0.020783719419787832
+detailed_location,COMMERCIAL BLDG,recorded,52,0.011257848019051742
+detailed_location,RESTAURANT/DINER,recorded,28,0.006061918164104785
+detailed_location,BEAUTY/NAIL SALON,recorded,18,0.0038969473912102187
+detailed_location,GAS STATION,recorded,16,0.0034639532366313053
+detailed_location,HOTEL/MOTEL,recorded,13,0.0028144620047629355
+detailed_location,SOCIAL CLUB/POLICY LOCATI,recorded,13,0.0028144620047629355
+detailed_location,FAST FOOD,recorded,13,0.0028144620047629355
+detailed_location,LIQUOR STORE,recorded,11,0.0023814678501840225
+detailed_location,STORE UNCLASSIFIED,recorded,11,0.0023814678501840225
+detailed_location,SMALL MERCHANT,recorded,10,0.002164970772894566
+detailed_location,SUPERMARKET,recorded,5,0.001082485386447283
+detailed_location,CLOTHING BOUTIQUE,recorded,4,0.0008659883091578263
+detailed_location,HOSPITAL,recorded,4,0.0008659883091578263
+detailed_location,TELECOMM. STORE,recorded,4,0.0008659883091578263
+detailed_location,DRUG STORE,recorded,3,0.0006494912318683698
+detailed_location,DEPT STORE,recorded,3,0.0006494912318683698
+detailed_location,CANDY STORE,recorded,2,0.00043299415457891317
+detailed_location,DRY CLEANER/LAUNDRY,recorded,2,0.00043299415457891317
+detailed_location,CHAIN STORE,recorded,2,0.00043299415457891317
+detailed_location,FACTORY/WAREHOUSE,recorded,2,0.00043299415457891317
+detailed_location,JEWELRY STORE,recorded,2,0.00043299415457891317
+detailed_location,VIDEO STORE,recorded,2,0.00043299415457891317
+detailed_location,SHOE STORE,recorded,2,0.00043299415457891317
+detailed_location,VARIETY STORE,recorded,2,0.00043299415457891317
+detailed_location,CHECK CASH,recorded,1,0.00021649707728945658
+detailed_location,GYM/FITNESS FACILITY,recorded,1,0.00021649707728945658
+detailed_location,SCHOOL,recorded,1,0.00021649707728945658
+detailed_location,LOAN COMPANY,recorded,1,0.00021649707728945658
+detailed_location,PHOTO/COPY STORE,recorded,1,0.00021649707728945658

@@ -1,0 +1,13 @@
+setting,value
+primary_model,dynamic_count_ensemble
+development_origins,"2018-2021; March, June, September month-end"
+evaluation_origins,"2022-2025; March, June, September month-end"
+forecast_horizons_days,"14, 28"
+local_level_window_days,28
+weekday_effect_shrinkage,0.5
+autoregressive_training_years,5
+autoregressive_lags_days,"1, 7, 14"
+autoregressive_penalty,50.0
+local_component_weight,0.75
+autoregressive_component_weight,0.25
+predictive_distribution,negative binomial; 80% interval

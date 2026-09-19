@@ -1,0 +1,2 @@
+model,days,temperature_increment_c,incidence_rate_ratio,lower_95,upper_95,coefficient_log_rate,robust_standard_error
+"Poisson log-link with year, month, and weekday fixed effects; 14-day HAC uncertainty",7305,5,1.1739338886785824,1.1513688977697112,1.196941117358253,0.16036040694002138,0.009902462539854143

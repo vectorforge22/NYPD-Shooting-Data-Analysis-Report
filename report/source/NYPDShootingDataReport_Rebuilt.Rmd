@@ -1,0 +1,1677 @@
+---
+title: "NYPD Shooting Incidents"
+subtitle: "Exploratory Analysis and Forecast Evaluation"
+author: "Arthur Dominic Blanc"
+date: "18 September 2026"
+subject: "A repaired and completed analysis of NYPD-recorded shooting incidents"
+keywords: [NYPD, shooting incidents, exploratory data analysis, forecasting]
+publisher: "Arthur Dominic Blanc"
+rights: "Copyright (c) 2026 Arthur Dominic Blanc. All rights reserved."
+identifier: "urn:uuid:6f0d9298-c95b-4c6b-b0cc-2270e04338c7"
+lang: en-US
+documentclass: article
+classoption: titlepage
+fontsize: 10pt
+geometry: "a4paper,top=22mm,bottom=24mm,left=22mm,right=22mm"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    fig_caption: true
+    keep_tex: false
+    highlight: tango
+    includes:
+      in_header: report-preamble.tex
+  bookdown::epub_book:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    epub_version: epub3
+    stylesheet: kindle.css
+    cover_image: ../../publishing/cover/NYPD_Shooting_Incidents_Kindle_Cover.jpg
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  fig.path = "report-figures/",
+  fig.pos = "H",
+  fig.width = 7.2,
+  fig.height = 4.2,
+  out.width = "100%",
+  dpi = 300
+)
+
+options(digits = 4, scipen = 999, stringsAsFactors = FALSE)
+source("report-theme.R", local = knitr::knit_global())
+source("report-data.R", local = knitr::knit_global())
+
+report_is_latex <- knitr::is_latex_output()
+report_is_html <- knitr::is_html_output()
+report_table_format <- if (report_is_latex) {
+  "latex"
+} else if (report_is_html) {
+  "html"
+} else {
+  "pipe"
+}
+```
+
+\thispagestyle{fancy}
+
+\clearpage
+
+# About this edition {-}
+
+Copyright (c) 2026 Arthur Dominic Blanc. All rights reserved.
+
+This independent publication originated in graduate coursework completed in the Master of Science in Data Science program at the University of Colorado Boulder. The present edition was independently repaired, expanded, edited, and published by Arthur Dominic Blanc. The university and the New York City Police Department did not sponsor, review, or endorse this edition.
+
+The original coursework report was first published on 25 January 2025.
+
+The report analyses public administrative records. It claims no ownership over the underlying public data, which remains attributed to its source agencies. No police badge, seal, or institutional mark is used.
+
+**Edition.** Revised publication edition, 18 September 2026. The pinned analytical snapshot covers 1 January 2006 through 30 June 2026. Later source revisions may change the partial 2026 record.
+
+**AI disclosure.** AI systems assisted with and, in some phases, generated draft code, tests, analytical scaffolding, visual designs, and prose. Arthur Dominic Blanc supplied the original work and context, set the research and disclosure boundaries, directed and corrected the agents, reviewed the evidence, and retains final editorial and publication responsibility. The full contribution account appears in *How this report was made: operator, agents, and evidence*.
+
+**Suggested citation.** Blanc, Arthur Dominic. *NYPD Shooting Incidents: Exploratory Analysis and Forecast Evaluation*. Revised publication edition, 2026.
+
+\clearpage
+
+# Author's note {-}
+
+I began this project because I did not want graduate work to feel like a checklist. I wanted it to behave like a real project: ask useful questions, connect the supplied dataset to a wider environment, and leave enough starting points for practitioners to think without forcing them into one explanation.
+
+That ambition became larger than one student, one assignment, and the available time. The original report reached toward sporting events, political events, weather, forecasting, and infrastructure, but some of its foundations were not secure. Most consequentially, it treated victim-record rows as if each row represented a separate shooting incident. It also allowed exploratory patterns to lean too close to explanation.
+
+This edition returns to the same questions with a different standard. Units are separated before they are counted. Denominators are stated. Contextual sources have explicit universes. Forecasts are evaluated against chronological holdouts and simple baselines. Uncertainty and missingness remain visible. The aim is not to make the old report look better. It is to find out which questions and conclusions survive a more defensible process.
+
+\clearpage
+
+# Responsible reading {-}
+
+This report concerns shootings and contains administrative demographic fields. Those fields should not be turned into claims about identity, guilt, propensity, or cause.
+
+- A shooting incident, a victim record, and a known-offender record are different analytical units.
+- Known-offender records are incomplete, do not exist for every incident, and are not evidence of conviction.
+- Recorded categories are administrative fields, not complete descriptions of people.
+- Counts do not automatically measure population risk or exposure.
+- Geographic, demographic, weather, holiday, sports, and political-event patterns are observational unless a stronger design is explicitly established.
+
+The report retains sensitive results because omission can hide missingness and measurement boundaries. It refuses to promote those results beyond the evidence available.
+
+\clearpage
+
+> **Scope note.** This document is the completed public-facing exploratory report. The larger contextual XGBoost programme identified during the rebuild is reserved for a separate document.
+
+# Executive summary {-}
+
+This report examines shooting incidents recorded by the New York City Police Department from 1 January 2006 through 30 June 2026. It describes when and where incidents were recorded, separates incident, victim, and known-offender units, and preserves the original project's aim of turning a public dataset into useful questions. It does not estimate causes or policy effects.
+
+The verified core currently supports twelve findings:
+
+1. Across complete calendar years, recorded incidents declined from `r fmt_int(annual_value(2006))` in 2006 to `r fmt_int(incidents_2019)` in 2019, increased to `r fmt_int(incidents_2020)` in 2020, and then declined to `r fmt_int(incidents_2025)` in 2025.
+2. The 2020 count was `r fmt_pct(change_2019_2020)` higher than 2019. This sharp change is visible in the record, but the series alone does not identify its cause.
+3. Through 30 June, 2026 recorded `r fmt_int(ytd_incidents_2026)` incidents, compared with `r fmt_int(ytd_incidents_2025)` in the same 2025 window, a change of `r fmt_pct(change_ytd_2025_2026)`.
+4. Calendar exposure does not remove the temporal concentration: July averaged `r fmt_decimal(peak_month$incidents_per_calendar_day)` incidents per day, Sunday averaged `r fmt_decimal(peak_weekday$incidents_per_calendar_day)`, and the five hours from 22:00 through 02:59 contained `r fmt_pct(late_night_share)` of incidents in complete years.
+5. Using matching 2020 Census populations, the highest recorded borough rate in 2020 was `r tools::toTitleCase(tolower(highest_borough_rate$borough))` at `r fmt_decimal(highest_borough_rate$incidents_per_100k_2020)` incidents per 100,000 residents. This is a borough-level comparison, not an individual risk estimate.
+6. Across `r fmt_int(income_result$tracts)` Census tracts with usable 2020 ACS population and income estimates, median household income and the 2020 shooting-incident rate had a Spearman correlation of `r fmt_decimal(income_result$rho, 0.01)` (tract-bootstrap 95% interval `r fmt_decimal(income_result$bootstrap_lower_95, 0.01)` to `r fmt_decimal(income_result$bootstrap_upper_95, 0.01)`). This is a tract-level association, not an individual or causal estimate.
+7. Of `r fmt_int(fatal_incidents_complete)` fatal incidents in complete years, `r fmt_int(fatal_linked_incidents)` had at least one linked known-offender record and `r fmt_int(fatal_unlinked_incidents)` did not. Any known-offender distribution therefore describes only the published linked records.
+8. Summer had the highest exposure-adjusted seasonal rate at `r fmt_decimal(season_peak$incidents_per_calendar_day)` incidents per day, compared with `r fmt_decimal(season_low$incidents_per_calendar_day)` in winter.
+9. After year, month, and weekday controls, a 5°C higher Central Park daily average temperature was associated with an incident-rate ratio of `r fmt_decimal(temperature_result$incidence_rate_ratio, 0.01)` (95% interval `r fmt_decimal(temperature_result$lower_95, 0.01)` to `r fmt_decimal(temperature_result$upper_95, 0.01)`). This does not establish a causal effect of temperature.
+10. Federal holidays averaged `r fmt_decimal(holiday_overall$paired_difference)` more incidents than same-weekday controls within the same year, but named holidays varied widely. Across Super Bowl, NBA Finals, and World Series game dates together, the corresponding difference was `r fmt_decimal(sports_overall$paired_difference)` incidents per day and its interval included zero.
+11. The political-event analysis is restricted to 2017-2025. Recorded political-crowd days had a calendar-adjusted incident-rate ratio of `r fmt_decimal(protest_result$incidence_rate_ratio, 0.01)` relative to non-event days (95% interval `r fmt_decimal(protest_result$lower_95, 0.01)` to `r fmt_decimal(protest_result$upper_95, 0.01)`), but reporting coverage is dense, time-varying, and not random.
+12. The preferred 14/28-day forecasting model is a dynamic count ensemble. On twelve untouched 2022-2025 rolling origins, its MAE was `r fmt_decimal(primary_forecast_metrics$mae[primary_forecast_metrics$horizon_days == 14], 0.01)` incidents per day at 14 days and `r fmt_decimal(primary_forecast_metrics$mae[primary_forecast_metrics$horizon_days == 28], 0.01)` at 28 days. It beat both the strongest predeclared naive benchmark and Prophet at each horizon, but its error remains too large for precise tactical claims.
+
+The current edition also distinguishes `r fmt_int(fatal_incidents_complete)` incidents containing at least one fatal victim from `r fmt_int(fatal_victims_complete)` fatal victim records across 2006-2025. Demographic charts describe fields recorded in victim and known-offender tables; they do not measure population risk, guilt, or causation.
+
+\clearpage
+
+# Introduction
+
+The original project asked a sensible sequence of questions: How has the recorded series changed? When and where are shootings concentrated? What can victim and offender records show? Can external context or forecasting improve understanding? The rebuild retains that inquiry and corrects its evidence layer rather than replacing it with a different project.
+
+This is an exploratory report about **NYPD-recorded shooting incidents**. Administrative data can describe the published record and reveal patterns worth investigating. It cannot, by itself, establish why a change happened or which intervention caused it. The later forecasting section will evaluate prediction as a separate task, with chronological holdouts and explicit benchmarks.
+
+## Questions in this report
+
+- How did the annual series change from 2006 through the latest complete year?
+- How does the partial 2026 record compare with equivalent prior-year windows?
+- Which months, weekdays, and hours contain more recorded incidents after calendar exposure is considered?
+- How did 2020 borough counts compare after applying matching population denominators?
+- Where do coordinate-valid incidents concentrate, and how do tract income and incident rates compare in 2020?
+- How do fatal incidents differ from fatal victim records?
+- When and where were fatal incidents recorded, and how complete are their known-offender links?
+- What do the recorded victim and known-offender fields contain, and where are they incomplete?
+- Does the seasonal pattern remain after equalising calendar exposure, and is daily temperature associated with incidents after calendar controls?
+- Do federal holidays or nationally salient championship-game dates differ from comparable weekdays in the same seasonal window?
+- Are independently documented NYC political-crowd days associated with a different daily incident count within the source's defensible coverage period?
+
+The contextual questions are completed under explicit event universes. Forecasting is evaluated as a separate prediction task under rolling chronological holdouts.
+
+# Data and preparation
+
+## Pinned official snapshot
+
+The report reads a fixed local snapshot of three related [NYC Open Data](https://data.cityofnewyork.us/) tables. It does not download mutable data while the PDF is knitted. The snapshot was retrieved on `r snapshot_retrieved` and covers 1 January 2006 through 30 June 2026. The latest complete calendar year is `r audit$current_snapshot$latest_complete_year`.
+
+```{r source-table, results='asis'}
+display_source_table <- source_table
+display_source_table$Records.after.cleaning <- fmt_int(display_source_table$Records.after.cleaning)
+names(display_source_table) <- c("Analytical unit", "NYC Open Data ID", "Records after cleaning")
+knitr::kable(
+  display_source_table,
+  format = report_table_format,
+  booktabs = report_is_latex,
+  align = c("l", "l", "r")
+)
+```
+
+The source tables are [Shootings, 5ucz-vwe8](https://data.cityofnewyork.us/d/5ucz-vwe8), [Shooting Victims, pztn-9bne](https://data.cityofnewyork.us/d/pztn-9bne), and [Shooting Offenders, gdk4-mbsv](https://data.cityofnewyork.us/d/gdk4-mbsv). Full file hashes are retained in Appendix A and in the snapshot manifest.
+
+## Three units, three questions
+
+**Shooting incident.** One row in the current shootings table, uniquely identified by `INCIDENT_KEY`. Incident counts answer event-level questions about time and place.
+
+**Victim record.** One row in the victims table after removing exact duplicates. These records answer victim-level questions and can exceed incident counts when an incident has multiple victims.
+
+**Known-offender record.** One row in the offenders table after removing exact duplicates. These are published records for known suspects or offenders. They are not convictions, do not exist for every incident, and are not a population denominator.
+
+The complete-year charts use `r fmt_int(complete_incidents)` incidents from 2006-2025. The current snapshot contains `r fmt_int(current_incidents)` incidents after adding the partial 2026 period. Partial-year records appear only in equivalent year-to-date comparisons.
+
+## Validation and cleaning
+
+- The shootings table contains `r fmt_int(audit$shootings$duplicate_incident_keys)` duplicate incident keys after cleaning.
+- The pipeline removed `r fmt_int(audit$victims$exact_duplicates_removed)` exact victim duplicates and `r fmt_int(audit$offenders$exact_duplicates_removed)` exact offender duplicates.
+- Two victim rows and two offender rows lack a matching current incident key. They remain in the audit but are excluded from date-based summaries because an occurrence date cannot be assigned from the incident table.
+- Coordinates are validated one row at a time. `r fmt_int(audit$shootings$coordinate_status$reversed_in_export)` rows required latitude and longitude reversal, `r fmt_int(audit$shootings$coordinate_status$as_published)` were already in the stated orientation, and one row remains unresolved.
+- Complete-year month and weekday comparisons use incidents per observed calendar day. Hourly charts use incident-level occurrence time in New York local time.
+
+The maintained Python analysis and its tests produce the tables read by this report. The PDF build stops if required outputs are absent or if annual, monthly, hourly, daily, or borough totals fail reconciliation.
+
+```{r unit-diagram, fig.height=3.5, fig.cap="Relationship among the three analytical units in the pinned snapshot. INCIDENT\\_KEY links person records to an event without changing the unit represented by any row."}
+unit_boxes <- data.frame(
+  xmin = c(-0.72, -1.85, 0.35),
+  xmax = c(0.72, -0.35, 1.85),
+  ymin = c(1.55, -0.05, -0.05),
+  ymax = c(2.45, 0.88, 0.88),
+  fill = c(report_colours[["teal"]], report_colours[["paper"]], report_colours[["paper"]]),
+  colour = c(report_colours[["teal"]], report_colours[["teal"]], report_colours[["orange"]])
+)
+
+unit_labels <- data.frame(
+  x = c(0, -1.1, 1.1),
+  y = c(2.0, 0.42, 0.42),
+  label = c(
+    paste0("Shooting incident\n", fmt_int(current_incidents), " rows\nDate, time, and place"),
+    paste0("Victim record\n", fmt_int(current_victims), " rows\nZero to many per incident"),
+    paste0("Known-offender record\n", fmt_int(current_offenders), " rows\nZero to many per incident")
+  ),
+  text_colour = c("white", report_colours[["ink"]], report_colours[["ink"]])
+)
+
+unit_diagram <- ggplot2::ggplot() +
+  ggplot2::geom_segment(
+    ggplot2::aes(x = 0, y = 1.55, xend = -1.1, yend = 0.9),
+    colour = report_colours[["teal"]],
+    linewidth = 0.7,
+    arrow = grid::arrow(length = grid::unit(0.16, "cm"))
+  ) +
+  ggplot2::geom_segment(
+    ggplot2::aes(x = 0, y = 1.55, xend = 1.1, yend = 0.9),
+    colour = report_colours[["orange"]],
+    linewidth = 0.7,
+    arrow = grid::arrow(length = grid::unit(0.16, "cm"))
+  ) +
+  ggplot2::geom_rect(
+    data = unit_boxes,
+    ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax,
+                 fill = I(fill), colour = I(colour)),
+    linewidth = 0.8
+  ) +
+  ggplot2::geom_text(
+    data = unit_labels,
+    ggplot2::aes(x = x, y = y, label = label, colour = I(text_colour)),
+    lineheight = 1.15,
+    size = 3.4
+  ) +
+  ggplot2::annotate(
+    "text", x = -0.55, y = 1.18, label = "INCIDENT_KEY", angle = 30,
+    size = 2.5, colour = report_colours[["slate"]]
+  ) +
+  ggplot2::annotate(
+    "text", x = 0.55, y = 1.18, label = "INCIDENT_KEY", angle = -30,
+    size = 2.5, colour = report_colours[["slate"]]
+  ) +
+  ggplot2::coord_cartesian(xlim = c(-2.0, 2.0), ylim = c(-0.12, 2.65), clip = "off") +
+  ggplot2::labs(
+    title = "One event table, two person-record tables",
+    subtitle = "A join connects records; it does not turn a person record into another incident"
+  ) +
+  ggplot2::theme_void() +
+  ggplot2::theme(
+    plot.title = ggplot2::element_text(
+      colour = report_colours[["ink"]], face = "bold", size = 13,
+      margin = ggplot2::margin(b = 4)
+    ),
+    plot.subtitle = ggplot2::element_text(
+      colour = report_colours[["slate"]], size = 9.5,
+      margin = ggplot2::margin(b = 8)
+    ),
+    plot.margin = ggplot2::margin(8, 14, 8, 14)
+  )
+
+add_report_watermark(unit_diagram)
+```
+
+\clearpage
+
+# How recorded shootings changed over time
+
+## Complete calendar years
+
+```{r annual-incidents, fig.height=4.5, fig.cap="Annual NYPD-recorded shooting incidents, 2006-2025. Unit: unique shooting incident. Partial 2026 is excluded. Source: NYC Open Data shootings table, pinned 2026-09-14 snapshot."}
+annual_labels <- dplyr::filter(complete_annual, year %in% c(2006, 2019, 2020, 2025))
+
+annual_plot <- ggplot2::ggplot(complete_annual, ggplot2::aes(x = year, y = incidents)) +
+  ggplot2::annotate("rect", xmin = 2019.5, xmax = 2021.5, ymin = -Inf, ymax = Inf,
+                    fill = report_colours[["ochre"]], alpha = 0.10) +
+  ggplot2::geom_line(linewidth = 0.9, colour = report_colours[["teal"]]) +
+  ggplot2::geom_point(size = 2.1, colour = report_colours[["teal"]]) +
+  ggplot2::geom_point(data = annual_labels, size = 2.8, colour = report_colours[["orange"]]) +
+  ggplot2::geom_text(data = annual_labels, ggplot2::aes(label = fmt_int(incidents)),
+                     vjust = -1.0, size = 3, colour = report_colours[["ink"]]) +
+  ggplot2::scale_x_continuous(breaks = seq(2006, 2025, by = 2)) +
+  ggplot2::scale_y_continuous(labels = scales::comma,
+                              expand = ggplot2::expansion(mult = c(0.03, 0.12))) +
+  ggplot2::labs(
+    title = "A long decline, a sharp 2020 discontinuity, then another decline",
+    subtitle = "The highlighted interval marks 2020-2021; it does not assign a cause",
+    x = NULL, y = "Recorded incidents"
+  ) +
+  theme_report()
+
+add_report_watermark(annual_plot)
+```
+
+The record declined from `r fmt_int(annual_value(2006))` incidents in 2006 to `r fmt_int(incidents_2019)` in 2019, a `r fmt_pct(incidents_2019 / annual_value(2006) - 1)` change from the first to the last year. Recorded incidents then increased by `r fmt_pct(change_2019_2020)` in one year, from `r fmt_int(incidents_2019)` in 2019 to `r fmt_int(incidents_2020)` in 2020. By 2025, the count had declined to `r fmt_int(incidents_2025)`, `r fmt_pct(change_2023_2025)` below 2023.
+
+These periods describe the shape of the series. They are not estimates of a pandemic effect or any other historical cause. An exploratory segmented-linear sensitivity check selected breaks beginning in 2013 and 2020 by Bayesian Information Criterion, supporting the claim that one straight trend is inadequate but not proving that those dates define causal eras.
+
+```{r period-table, results='asis'}
+context_periods <- period_summary |>
+  dplyr::filter(period_family == "context") |>
+  dplyr::transmute(
+    Period = dplyr::recode(period,
+      pre_2020_decline = "Pre-2020 decline",
+      `2020_2021_discontinuity` = "2020-2021 discontinuity",
+      post_2021_decline = "Post-2021 decline"),
+    Years = paste0(start_year, "-", end_year),
+    `First to last` = paste0(fmt_int(first_year_incidents), " to ", fmt_int(last_year_incidents)),
+    `Descriptive slope` = paste0(fmt_decimal(ols_slope_incidents_per_year), " incidents/year")
+  )
+knitr::kable(context_periods, format = report_table_format, booktabs = report_is_latex,
+             align = c("l", "c", "c", "r"))
+```
+
+## A fair comparison for partial 2026
+
+```{r ytd-comparison, fig.height=4.1, fig.cap="NYPD-recorded shooting incidents from 1 January through 30 June in each year, 2021-2026. Unit: unique shooting incident. Source: NYC Open Data shootings table, pinned 2026-09-14 snapshot."}
+ytd_plot_data <- ytd_comparison |>
+  dplyr::mutate(emphasis = dplyr::case_when(
+    year == 2026 ~ "2026", year == 2025 ~ "2025", TRUE ~ "Earlier comparison"))
+
+ytd_plot <- ggplot2::ggplot(ytd_plot_data,
+                            ggplot2::aes(x = factor(year), y = incidents, fill = emphasis)) +
+  ggplot2::geom_col(width = 0.68) +
+  ggplot2::geom_text(ggplot2::aes(label = fmt_int(incidents)), vjust = -0.45,
+                     size = 3.1, colour = report_colours[["ink"]]) +
+  ggplot2::scale_fill_manual(values = c(
+    "2026" = report_colours[["orange"]], "2025" = report_colours[["teal"]],
+    "Earlier comparison" = report_colours[["mist"]])) +
+  ggplot2::scale_y_continuous(labels = scales::comma,
+                              expand = ggplot2::expansion(mult = c(0, 0.12))) +
+  ggplot2::labs(
+    title = "January-June 2026 was slightly below the same 2025 window",
+    subtitle = paste0(fmt_int(ytd_incidents_2026), " incidents in 2026 versus ",
+                      fmt_int(ytd_incidents_2025), " in 2025 (", fmt_pct(change_ytd_2025_2026), ")"),
+    x = NULL, y = "Incidents through 30 June"
+  ) +
+  theme_report()
+
+add_report_watermark(ytd_plot)
+```
+
+The partial 2026 record never enters a full-year trend. It is compared only with the same January-June exposure window in prior years. The `r fmt_pct(change_ytd_2025_2026)` difference from 2025 is small relative to the larger declines visible since 2021 and should not be treated as a forecast for the rest of 2026.
+
+\clearpage
+
+# When shootings were recorded
+
+## Month: summer remains the high-exposure period
+
+```{r month-rate, fig.height=4.3, fig.cap="Average NYPD-recorded shooting incidents per calendar day by month, 2006-2025 complete years. Unit: unique shooting incident divided by observed calendar days. Source: NYC Open Data shootings table."}
+month_plot_data <- temporal_month |>
+  dplyr::mutate(month_name = factor(month_name, levels = month.name))
+
+month_plot <- ggplot2::ggplot(month_plot_data,
+                             ggplot2::aes(x = month_name, y = incidents_per_calendar_day)) +
+  ggplot2::geom_col(ggplot2::aes(fill = month == peak_month$month), width = 0.72) +
+  ggplot2::scale_fill_manual(values = c(`TRUE` = report_colours[["orange"]],
+                                        `FALSE` = report_colours[["teal"]]), guide = "none") +
+  ggplot2::scale_y_continuous(labels = scales::number_format(accuracy = 0.1),
+                              expand = ggplot2::expansion(mult = c(0, 0.08))) +
+  ggplot2::labs(
+    title = "July averaged more than twice February's daily incident rate",
+    subtitle = paste0("July: ", fmt_decimal(peak_month$incidents_per_calendar_day),
+                      " incidents/day; February: ", fmt_decimal(lowest_month$incidents_per_calendar_day)),
+    x = NULL, y = "Incidents per calendar day"
+  ) +
+  theme_report() +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 35, hjust = 1))
+
+add_report_watermark(month_plot)
+```
+
+Raw monthly totals give longer months more opportunities to accumulate incidents. Dividing by the number of observed calendar days retains the summer concentration: July averaged `r fmt_decimal(peak_month$incidents_per_calendar_day)` incidents per day across complete years, compared with `r fmt_decimal(lowest_month$incidents_per_calendar_day)` in February. This is a recurring calendar pattern, not evidence that temperature or a seasonal mechanism caused the difference.
+
+## Weekday: weekends remain higher after exposure adjustment
+
+```{r weekday-rate, fig.height=4.1, fig.cap="Average NYPD-recorded shooting incidents per calendar day by weekday, 2006-2025 complete years. Unit: unique shooting incident divided by observed weekdays. Source: NYC Open Data shootings table."}
+weekday_levels <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+weekday_plot_data <- temporal_weekday |>
+  dplyr::mutate(weekday = factor(weekday, levels = weekday_levels))
+
+weekday_plot <- ggplot2::ggplot(weekday_plot_data,
+                               ggplot2::aes(x = weekday, y = incidents_per_calendar_day)) +
+  ggplot2::geom_col(ggplot2::aes(fill = weekday %in% c("Saturday", "Sunday")), width = 0.7) +
+  ggplot2::scale_fill_manual(values = c(`TRUE` = report_colours[["orange"]],
+                                        `FALSE` = report_colours[["teal"]]), guide = "none") +
+  ggplot2::scale_y_continuous(labels = scales::number_format(accuracy = 0.1),
+                              expand = ggplot2::expansion(mult = c(0, 0.08))) +
+  ggplot2::labs(
+    title = "Saturday and Sunday carried the highest daily averages",
+    subtitle = paste0("Sunday: ", fmt_decimal(peak_weekday$incidents_per_calendar_day),
+                      "; ", lowest_weekday$weekday, ": ",
+                      fmt_decimal(lowest_weekday$incidents_per_calendar_day), " incidents/day"),
+    x = NULL, y = "Incidents per calendar day"
+  ) +
+  theme_report()
+
+add_report_watermark(weekday_plot)
+```
+
+Sunday averaged `r fmt_decimal(peak_weekday$incidents_per_calendar_day)` incidents per observed day, while `r lowest_weekday$weekday` averaged `r fmt_decimal(lowest_weekday$incidents_per_calendar_day)`. The denominator is the number of each weekday present in the 2006-2025 calendar, so the contrast is not an artifact of unequal weekday counts.
+
+## Hour: concentration shifts into late evening and early morning
+
+```{r hour-distribution, fig.height=4.3, fig.cap="Distribution of NYPD-recorded shooting incidents by local occurrence hour, 2006-2025 complete years. Unit: unique shooting incident with a valid occurrence time. Source: NYC Open Data shootings table."}
+hour_plot <- ggplot2::ggplot(temporal_hour, ggplot2::aes(x = occur_hour, y = incidents)) +
+  ggplot2::geom_area(fill = report_colours[["teal"]], alpha = 0.16) +
+  ggplot2::geom_line(linewidth = 0.9, colour = report_colours[["teal"]]) +
+  ggplot2::geom_point(data = dplyr::filter(temporal_hour, occur_hour == peak_hour$occur_hour),
+                      size = 2.8, colour = report_colours[["orange"]]) +
+  ggplot2::scale_x_continuous(breaks = seq(0, 23, by = 2), limits = c(0, 23)) +
+  ggplot2::scale_y_continuous(labels = scales::comma) +
+  ggplot2::labs(
+    title = "The hourly series peaks at 23:00",
+    subtitle = paste0("22:00 through 02:59 accounts for ", fmt_pct(late_night_share),
+                      " of complete-year incidents"),
+    x = "Local occurrence hour", y = "Recorded incidents"
+  ) +
+  theme_report()
+
+add_report_watermark(hour_plot)
+```
+
+The highest single-hour count is at `r sprintf("%02d:00", peak_hour$occur_hour)`, with `r fmt_int(peak_hour$incidents)` incidents across complete years. The five-hour late-night interval from 22:00 through 02:59 contains `r fmt_pct(late_night_share)` of recorded incidents. This identifies a concentration in the administrative record; it does not explain the social mechanisms behind it.
+
+\clearpage
+
+## Day-to-day variation
+
+```{r daily-variation, fig.height=4.2, fig.cap="Distribution of daily NYPD-recorded shooting incident counts within each month, 2006-2025 complete years. Each box summarizes daily counts across all observed years; points beyond whiskers remain visible. Source: maintained daily incident series."}
+daily_variation_plot <- ggplot2::ggplot(daily_incidents,
+                                        ggplot2::aes(x = month_name, y = incidents)) +
+  ggplot2::geom_boxplot(width = 0.62, outlier.size = 0.45, outlier.alpha = 0.35,
+                        fill = report_colours[["paper"]], colour = report_colours[["teal"]]) +
+  ggplot2::labs(
+    title = "Higher summer averages also come with wider daily variation",
+    subtitle = "The distribution preserves the original report's day-level variability question",
+    x = NULL, y = "Incidents per day"
+  ) +
+  theme_report()
+
+add_report_watermark(daily_variation_plot)
+```
+
+Daily distributions overlap substantially across months. Summer has both higher central values and more high-count days, but any individual day can depart from the monthly pattern. That overlap is why the report retains the variability question instead of reducing the calendar analysis to a single monthly ranking.
+
+\clearpage
+
+# Where shootings were recorded
+
+## A denominator-matched 2020 borough comparison
+
+```{r borough-rates, fig.height=4.5, fig.cap="NYPD-recorded shooting incidents per 100,000 residents by borough in 2020. Unit: unique shooting incident; denominator: 2020 Decennial Census borough population. Sources: NYC Open Data shootings table and NYC Department of City Planning 2020 Census briefing."}
+borough_plot_data <- borough_2020 |>
+  dplyr::mutate(
+    borough_label = tools::toTitleCase(tolower(borough)),
+    borough_label = factor(borough_label, levels = borough_label[order(incidents_per_100k_2020)])
+  )
+
+borough_plot <- ggplot2::ggplot(borough_plot_data,
+                               ggplot2::aes(x = borough_label, y = incidents_per_100k_2020)) +
+  ggplot2::geom_col(width = 0.68, fill = report_colours[["teal"]]) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(fmt_decimal(incidents_per_100k_2020), " per 100k  |  ",
+                                fmt_int(incidents_2020), " incidents")),
+    hjust = -0.06, size = 3, colour = report_colours[["ink"]]
+  ) +
+  ggplot2::coord_flip() +
+  ggplot2::scale_y_continuous(limits = c(0, max(borough_2020$incidents_per_100k_2020) * 1.42),
+                              expand = ggplot2::expansion(mult = c(0, 0))) +
+  ggplot2::labs(
+    title = "The Bronx had the highest 2020 recorded-incident rate",
+    subtitle = "Counts and rates answer different borough-level questions",
+    x = NULL, y = "Incidents per 100,000 residents"
+  ) +
+  theme_report()
+
+add_report_watermark(borough_plot)
+```
+
+Brooklyn recorded the largest count in 2020 (`r fmt_int(borough_2020$incidents_2020[borough_2020$borough == "BROOKLYN"])` incidents), while the Bronx had the highest rate after division by its matching 2020 Census population (`r fmt_decimal(highest_borough_rate$incidents_per_100k_2020)` per 100,000). Staten Island had the lowest rate (`r fmt_decimal(lowest_borough_rate$incidents_per_100k_2020)` per 100,000).
+
+This comparison is deliberately limited to 2020 because the denominator and incident year match. Applying a fixed 2020 population to the entire 2006-2025 series would ignore demographic change and changing exposure. Borough rates also average over large, internally diverse areas and should not be read as an individual's probability of harm.
+
+## What the location fields can actually say
+
+```{r location-classification, fig.height=4.7, fig.cap="Location classifications for NYPD-recorded shooting incidents, 2006-2025 complete years. Unit: unique incident. The detailed LOCATION\\_DESC field is missing or unknown for 14,484 incidents, so the broader classification field is used for the chart. Source: NYC Open Data shootings table."}
+location_plot_data <- location_classification |>
+  dplyr::slice_head(n = 9) |>
+  dplyr::mutate(
+    value_label = tools::toTitleCase(tolower(value)),
+    value_label = factor(value_label, levels = rev(value_label))
+  )
+
+location_plot <- ggplot2::ggplot(location_plot_data,
+                                ggplot2::aes(x = value_label, y = share_of_records)) +
+  ggplot2::geom_col(width = 0.68, fill = report_colours[["teal"]]) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(fmt_pct(share_of_records), "  |  ", fmt_int(count))),
+    hjust = -0.05, size = 3, colour = report_colours[["ink"]]
+  ) +
+  ggplot2::coord_flip() +
+  ggplot2::scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    limits = c(0, max(location_plot_data$share_of_records) * 1.35),
+    expand = ggplot2::expansion(mult = c(0, 0))
+  ) +
+  ggplot2::labs(
+    title = "Most recorded incidents were classified as street events",
+    subtitle = paste0(
+      fmt_pct(detailed_location_missing$share_of_records),
+      " of the more detailed location descriptions are missing or unknown"
+    ),
+    x = NULL, y = "Share of complete-year incidents"
+  ) +
+  theme_report()
+
+add_report_watermark(location_plot)
+```
+
+The broad location classification is available for nearly every incident and places `r fmt_pct(location_classification$share_of_records[location_classification$value == "STREET"])` in the street category. The more specific description is incomplete for `r fmt_int(detailed_location_missing$count)` incidents (`r fmt_pct(detailed_location_missing$share_of_records)`). It can still identify recorded settings such as public housing or apartment buildings, but it cannot support a complete ranking of detailed settings.
+
+\clearpage
+
+## Coordinate-valid incidents form a concentrated city pattern
+
+```{r incident-density-map, fig.height=6.3, fig.cap="Coordinate-valid NYPD-recorded shooting incidents, 2006-2025 complete years. Each translucent point is one unique incident after row-level latitude/longitude validation. One record in the full snapshot has unresolved coordinates and is excluded. A concentration of points is not an individual risk surface. Source: NYC Open Data shootings table."}
+map_plot <- ggplot2::ggplot(
+  spatial_points_complete,
+  ggplot2::aes(x = longitude_clean, y = latitude_clean)
+) +
+  ggplot2::geom_point(
+    colour = report_colours[["teal"]], alpha = 0.075, size = 0.32, stroke = 0
+  ) +
+  ggplot2::coord_fixed(ratio = 1.30, xlim = c(-74.27, -73.68), ylim = c(40.48, 40.94)) +
+  ggplot2::labs(
+    title = "The record traces corridors and clusters, not a uniform city",
+    subtitle = paste0(fmt_int(nrow(spatial_points_complete)),
+                      " coordinate-valid incidents across complete years"),
+    x = "Longitude", y = "Latitude"
+  ) +
+  theme_report() +
+  ggplot2::theme(panel.grid = ggplot2::element_blank())
+
+add_report_watermark(map_plot)
+```
+
+The points make the administrative record speak more clearly than a borough total alone: concentrations are local and uneven within every borough. The map is intentionally not labelled a risk map. It shows where recorded incidents accumulated over twenty complete years without a time-varying population denominator, and it does not measure any individual's probability of harm.
+
+\clearpage
+
+## The income question, rebuilt on one 2020 geography
+
+```{r income-quartiles, fig.height=4.8, fig.cap="Aggregate 2020 shooting-incident rates by quartile of Census-tract median household income. Tracts are grouped into four equally sized sets after excluding non-positive or unavailable population and income estimates. Rates divide summed incidents by summed ACS population; whiskers are approximate Poisson 95% intervals. Sources: NYC Open Data, Census 2020-vintage tract geography, and 2020 ACS 5-year tables B01003 and B19013."}
+income_plot_data <- income_quartile_2020 |>
+  dplyr::mutate(
+    income_quartile = factor(income_quartile,
+                             levels = c("Q1 lowest", "Q2", "Q3", "Q4 highest"))
+  )
+
+income_plot <- ggplot2::ggplot(
+  income_plot_data,
+  ggplot2::aes(x = income_quartile, y = incidents_per_100k_2020)
+) +
+  ggplot2::geom_col(width = 0.66, fill = report_colours[["orange"]]) +
+  ggplot2::geom_errorbar(
+    ggplot2::aes(ymin = rate_lower_95, ymax = rate_upper_95),
+    width = 0.14, linewidth = 0.55, colour = report_colours[["ink"]]
+  ) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(fmt_decimal(incidents_per_100k_2020), " per 100k")),
+    vjust = -1.2, size = 3.1, colour = report_colours[["ink"]]
+  ) +
+  ggplot2::scale_y_continuous(
+    limits = c(0, max(income_plot_data$rate_upper_95) * 1.16),
+    expand = ggplot2::expansion(mult = c(0, 0))
+  ) +
+  ggplot2::labs(
+    title = "Recorded rates fell across higher-income tract quartiles",
+    subtitle = paste0("Tract-level Spearman rho = ", fmt_decimal(income_result$rho, 0.01),
+                      "  |  bootstrap 95% interval ",
+                      fmt_decimal(income_result$bootstrap_lower_95, 0.01), " to ",
+                      fmt_decimal(income_result$bootstrap_upper_95, 0.01)),
+    x = "2020 ACS median-household-income quartile", y = "Incidents per 100,000 residents"
+  ) +
+  theme_report()
+
+add_report_watermark(income_plot)
+```
+
+All `r fmt_int(spatial_audit[["shooting_incidents_2020"]])` incidents recorded in 2020 had valid coordinates and were assigned to a January 2020-vintage Census tract. Of 2,327 NYC tracts, `r fmt_int(income_result$tracts)` had positive ACS population and a published positive median household income. Those eligible tracts contain `r fmt_int(sum(income_quartile_2020$incidents_2020))` assigned incidents; the other `r fmt_int(spatial_audit[["shooting_incidents_2020"]] - sum(income_quartile_2020$incidents_2020))` fall in tracts lacking a usable income denominator.
+
+The lowest-income tract quartile recorded `r fmt_decimal(income_q1$incidents_per_100k_2020)` incidents per 100,000 residents, compared with `r fmt_decimal(income_q4$incidents_per_100k_2020)` in the highest-income quartile. The negative rank association is compatible with a socioeconomic gradient in the 2020 record. It is not a causal estimate, does not describe individuals, and does not resolve residential mobility, reporting and policing processes, ACS sampling error, small-area instability, or spatial dependence among neighbouring tracts.
+
+\clearpage
+
+# Fatal incidents, victims, and known-offender records
+
+## Fatal incidents are not the same as fatal victim records
+
+```{r fatal-trend, fig.height=4.5, fig.cap="Annual fatal victim records and shooting incidents containing at least one fatal victim, 2006-2025 complete years. Sources: NYC Open Data shootings and victim tables; distinct incident-level join in the maintained analysis."}
+fatal_plot_data <- dplyr::bind_rows(
+  dplyr::transmute(complete_annual, year, measure = "Fatal victim records", count = fatal_victims),
+  dplyr::transmute(complete_annual, year, measure = "Fatal incidents", count = fatal_incidents)
+)
+
+fatal_plot <- ggplot2::ggplot(fatal_plot_data,
+                             ggplot2::aes(x = year, y = count, colour = measure)) +
+  ggplot2::geom_line(linewidth = 0.85) +
+  ggplot2::geom_point(size = 1.7) +
+  report_colour_scale() +
+  ggplot2::scale_x_continuous(breaks = seq(2006, 2025, by = 2)) +
+  ggplot2::scale_y_continuous(labels = scales::comma) +
+  ggplot2::labs(
+    title = "Multiple fatal victims make the two annual measures diverge",
+    subtitle = "A fatal incident is counted once even when it contains more than one fatal victim",
+    x = NULL, y = "Annual count"
+  ) +
+  theme_report()
+
+add_report_watermark(fatal_plot)
+```
+
+Across complete years, the data contain `r fmt_int(fatal_incidents_complete)` incidents with at least one fatal victim and `r fmt_int(fatal_victims_complete)` fatal victim records. The `r fmt_int(fatal_victims_complete - fatal_incidents_complete)`-record difference is not an error: a single shooting incident can contain multiple fatal victims.
+
+## When fatal incidents were recorded
+
+```{r fatal-time, fig.height=6.5, fig.cap="Distribution of fatal shooting incidents by occurrence month, weekday, and hour, 2006-2025 complete years. Each fatal incident is counted once even when it has multiple fatal victims. Shares use all 4,619 fatal incidents; hours with missing time would remain in the denominator. Source: distinct incident-level join of NYC Open Data shootings and victim tables."}
+fatal_time_plot_data <- dplyr::bind_rows(
+  fatal_temporal_month |>
+    dplyr::transmute(panel = "Month", order = month,
+                     label = month.abb[month], share = share_of_fatal_incidents),
+  fatal_temporal_weekday |>
+    dplyr::transmute(panel = "Weekday", order = weekday_number + 1,
+                     label = substr(weekday, 1, 3), share = share_of_fatal_incidents),
+  fatal_temporal_hour |>
+    dplyr::transmute(panel = "Hour", order = occur_hour + 1,
+                     label = sprintf("%02d", occur_hour), share = share_of_fatal_incidents)
+) |>
+  dplyr::arrange(factor(panel, levels = c("Month", "Weekday", "Hour")), order) |>
+  dplyr::mutate(
+    key = paste(panel, sprintf("%02d", order), label, sep = "|"),
+    key = factor(key, levels = unique(key))
+  )
+
+fatal_time_plot <- ggplot2::ggplot(
+  fatal_time_plot_data,
+  ggplot2::aes(x = key, y = share)
+) +
+  ggplot2::geom_col(width = 0.72, fill = report_colours[["orange"]]) +
+  ggplot2::facet_wrap(~panel, ncol = 1, scales = "free_x") +
+  ggplot2::scale_x_discrete(labels = function(values) {
+    labels <- sub("^.*\\|", "", values)
+    panels <- sub("\\|.*$", "", values)
+    labels[panels == "Hour" & as.integer(labels) %% 3 != 0] <- ""
+    labels
+  }) +
+  ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  ggplot2::labs(
+    title = "Fatal incidents follow the same late-night and summer contours",
+    subtitle = "Three views of the same distinct fatal-incident set",
+    x = NULL, y = "Share of fatal incidents"
+  ) +
+  theme_report() +
+  ggplot2::theme(strip.text = ggplot2::element_text(face = "bold", colour = report_colours[["ink"]]))
+
+add_report_watermark(fatal_time_plot)
+```
+
+The fatal subset preserves the broader temporal story while narrowing the unit: it counts an incident once if at least one linked victim record is fatal. Month, weekday, and hour are read from that incident's event row, never multiplied by its number of victims or linked known-offender records.
+
+\clearpage
+
+## Locations of fatal incidents
+
+```{r fatal-place, fig.height=5.4, fig.cap="Borough and broad location-classification shares for fatal shooting incidents, 2006-2025 complete years. Unit: distinct fatal incident. Source: incident-level join of NYC Open Data shootings and victim tables."}
+fatal_place_plot_data <- dplyr::bind_rows(
+  fatal_borough |>
+    dplyr::transmute(panel = "Borough", value = tools::toTitleCase(tolower(BORO)),
+                     count = fatal_incidents, share = share_of_fatal_incidents),
+  fatal_location_descriptions |>
+    dplyr::filter(field == "location_classification") |>
+    dplyr::slice_max(count, n = 9, with_ties = FALSE) |>
+    dplyr::transmute(panel = "Location classification", value = tools::toTitleCase(tolower(value)),
+                     count, share = share_of_records)
+) |>
+  dplyr::group_by(panel) |>
+  dplyr::arrange(share, .by_group = TRUE) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(
+    key = paste(panel, value, sep = "|"),
+    key = factor(key, levels = unique(key))
+  )
+
+fatal_place_plot <- ggplot2::ggplot(
+  fatal_place_plot_data,
+  ggplot2::aes(x = key, y = share)
+) +
+  ggplot2::geom_col(width = 0.68, fill = report_colours[["teal"]]) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(fmt_pct(share), " | ", fmt_int(count))),
+    hjust = -0.05, size = 2.8, colour = report_colours[["ink"]]
+  ) +
+  ggplot2::coord_flip() +
+  ggplot2::facet_grid(panel ~ ., scales = "free_y", space = "free_y") +
+  ggplot2::scale_x_discrete(labels = function(values) sub("^.*\\|", "", values)) +
+  ggplot2::scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1), limits = c(0, 0.62),
+    expand = ggplot2::expansion(mult = c(0, 0))
+  ) +
+  ggplot2::labs(
+    title = "Brooklyn was the largest borough share; street was the largest setting",
+    subtitle = "Borough and location classifications describe the event record, not exposure-adjusted risk",
+    x = NULL, y = "Share of fatal incidents"
+  ) +
+  theme_report()
+
+add_report_watermark(fatal_place_plot)
+```
+
+```{r fatal-precinct-table, results='asis'}
+fatal_precinct_display <- fatal_precinct |>
+  dplyr::slice_max(fatal_incidents, n = 10, with_ties = FALSE) |>
+  dplyr::arrange(dplyr::desc(fatal_incidents)) |>
+  dplyr::transmute(
+    Precinct = as.integer(PRECINCT),
+    `Fatal incidents` = fmt_int(fatal_incidents),
+    `Share of fatal incidents` = fmt_pct(share_of_fatal_incidents)
+  )
+
+knitr::kable(
+  fatal_precinct_display, format = report_table_format, booktabs = report_is_latex,
+  caption = "Ten precincts with the most recorded fatal shooting incidents, 2006-2025 complete years.",
+  align = c("r", "r", "r")
+)
+```
+
+The precinct table is a count drill-down over the full period, not a risk ranking. Precinct populations and boundaries differ, and they change over time. A separate maintained 2020 table provides matching Census block-to-precinct population estimates for the one year in which a compatible rate comparison is defensible; the multi-year table above does not divide by a fixed 2020 denominator.
+
+\clearpage
+
+## Known-offender coverage comes before known-offender composition
+
+```{r fatal-offender-coverage, fig.height=3.8, fig.cap="Coverage of published known-offender links among fatal shooting incidents, 2006-2025 complete years. An incident is 'linked' when at least one distinct record appears in the NYPD Shooting Offenders table. Absence of a published link does not mean that no offender existed or was later identified elsewhere."}
+fatal_coverage_plot_data <- data.frame(
+  coverage = factor(c("At least one linked record", "No linked record"),
+                    levels = c("No linked record", "At least one linked record")),
+  incidents = c(fatal_linked_incidents, fatal_unlinked_incidents)
+) |>
+  dplyr::mutate(share = incidents / sum(incidents))
+
+fatal_coverage_plot <- ggplot2::ggplot(
+  fatal_coverage_plot_data,
+  ggplot2::aes(x = coverage, y = incidents, fill = coverage)
+) +
+  ggplot2::geom_col(width = 0.62, show.legend = FALSE) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = paste0(fmt_int(incidents), " incidents  |  ", fmt_pct(share))),
+    hjust = -0.05, size = 3.2, colour = report_colours[["ink"]]
+  ) +
+  ggplot2::coord_flip() +
+  ggplot2::scale_fill_manual(values = c(
+    "At least one linked record" = report_colours[["teal"]],
+    "No linked record" = report_colours[["orange"]]
+  )) +
+  ggplot2::scale_y_continuous(
+    limits = c(0, max(fatal_coverage_plot_data$incidents) * 1.38),
+    expand = ggplot2::expansion(mult = c(0, 0))
+  ) +
+  ggplot2::labs(
+    title = "One in three fatal incidents has no published known-offender link",
+    subtitle = paste0(fmt_int(fatal_linked_offender_records),
+                      " distinct linked known-offender records describe only the covered subset"),
+    x = NULL, y = "Fatal incidents"
+  ) +
+  theme_report()
+
+add_report_watermark(fatal_coverage_plot)
+```
+
+`r fmt_pct(fatal_linked_incident_share)` of fatal incidents have at least one linked record in the published known-offender table. The remaining `r fmt_int(fatal_unlinked_incidents)` fatal incidents must remain visible before any demographic breakdown. The table uses the dataset's administrative word *offender* for provenance; a published record is not proof of conviction, and these records cannot represent incidents with no published link.
+
+## Fatal-victim and linked-known-offender fields
+
+```{r fatal-demographics, fig.height=7.0, fig.cap="Recorded age, sex, and race fields for fatal-victim records and distinct known-offender records linked to fatal incidents, 2006-2025 complete years. Shares include unknown, missing, and invalid values in each entity-field denominator. These are descriptions of available administrative records, not population rates, guilt, or causes."}
+fatal_demographic_plot_data <- fatal_demographic_distributions |>
+  dplyr::mutate(
+    entity_label = dplyr::recode(
+      entity,
+      fatal_victim = "Fatal-victim records",
+      linked_known_offender = "Linked known-offender records"
+    ),
+    field_label = dplyr::recode(
+      field,
+      age_group = "Age group",
+      recorded_sex = "Recorded sex",
+      recorded_race = "Recorded race"
+    ),
+    value_label = dplyr::case_when(
+      status == "missing_or_unknown" ~ "Unknown or missing",
+      status == "invalid_recorded_value" ~ paste0("Invalid: ", value),
+      value == "ASIAN / PACIFIC ISLANDER" ~ "Asian / Pacific Islander",
+      TRUE ~ tools::toTitleCase(tolower(value))
+    )
+  ) |>
+  dplyr::group_by(field_label, value_label, entity_label) |>
+  dplyr::summarise(share = sum(share_of_records), .groups = "drop") |>
+  dplyr::arrange(field_label, share) |>
+  dplyr::mutate(
+    key = paste(field_label, value_label, sep = "|"),
+    key = factor(key, levels = unique(key))
+  )
+
+fatal_demographic_plot <- ggplot2::ggplot(
+  fatal_demographic_plot_data,
+  ggplot2::aes(x = key, y = share, fill = entity_label)
+) +
+  ggplot2::geom_col(position = "dodge", width = 0.72) +
+  ggplot2::coord_flip() +
+  ggplot2::facet_grid(field_label ~ ., scales = "free_y", space = "free_y") +
+  ggplot2::scale_x_discrete(labels = function(values) sub("^.*\\|", "", values)) +
+  report_fill_scale() +
+  ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  ggplot2::labs(
+    title = "The fatal subset can be described, but its coverage is unequal",
+    subtitle = "Every unknown, missing, and invalid recorded value remains in the denominator",
+    x = NULL, y = "Share of records", fill = NULL
+  ) +
+  theme_report()
+
+add_report_watermark(fatal_demographic_plot)
+```
+
+This completes the old “murder ratio by perpetrator race” question by correcting its design rather than hiding it. Fatal victims and fatal incidents are separate. Only distinct linked known-offender records enter the offender distribution. Incidents without a published offender link remain counted in the coverage panel. The race field therefore describes the available linked records and cannot be read as population risk, guilt, propensity, or a cause of fatality.
+
+## Responsible reading of demographic fields
+
+The charts below show administrative categories recorded in the victim and known-offender tables. They are not population-adjusted rates. The known-offender table covers only published known-suspect or offender records and cannot stand in for all incidents, convictions, or the population. Missingness is especially important in that table.
+
+```{r demographic-quality-table, results='asis'}
+quality_display <- demographic_quality |>
+  dplyr::mutate(
+    Entity = dplyr::recode(entity, victim = "Victim", offender = "Known offender"),
+    Field = dplyr::recode(field, age_group = "Age group",
+                          recorded_sex = "Recorded sex", recorded_race = "Recorded race"),
+    Records = fmt_int(total_records),
+    `Unknown or missing` = paste0(fmt_int(missing_or_unknown_count), " (",
+                                  fmt_pct(missing_or_unknown_share, accuracy = 0.1), ")"),
+    `Invalid values` = paste0(fmt_int(invalid_recorded_value_count), " (",
+                              fmt_pct(invalid_recorded_value_share, accuracy = 0.01), ")")
+  ) |>
+  dplyr::select(Entity, Field, Records, `Unknown or missing`, `Invalid values`)
+
+knitr::kable(quality_display, format = report_table_format, booktabs = report_is_latex,
+             align = c("l", "l", "r", "r", "r"))
+```
+
+Unknown or missing age group affects `r fmt_pct(demographic_quality$missing_or_unknown_share[demographic_quality$entity == "offender" & demographic_quality$field == "age_group"])` of known-offender records, compared with `r fmt_pct(demographic_quality$missing_or_unknown_share[demographic_quality$entity == "victim" & demographic_quality$field == "age_group"])` of victim records. Any comparison that removes those records would overstate how complete the offender information is.
+
+## Recorded age group
+
+```{r age-distribution, fig.height=5.0, fig.cap="Recorded age-group distribution for victim and known-offender records, 2006-2026 snapshot. Shares use all cleaned records for each table, including unknown, missing, and invalid values. Source: NYC Open Data victim and offender tables."}
+age_levels <- c("<18", "18-24", "25-44", "45-64", "65+",
+                "Unknown or missing", "Invalid recorded value")
+age_plot_data <- demographic_display |>
+  dplyr::filter(field == "age_group") |>
+  dplyr::mutate(display_value = factor(display_value, levels = rev(age_levels)))
+
+age_plot <- ggplot2::ggplot(age_plot_data,
+                           ggplot2::aes(x = display_value, y = share, fill = entity_label)) +
+  ggplot2::geom_col(position = "dodge", width = 0.68) +
+  ggplot2::coord_flip() +
+  report_fill_scale() +
+  ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  ggplot2::labs(
+    title = "Age-group records are concentrated between 18 and 44",
+    subtitle = "Unknown age is far more common in known-offender records",
+    x = NULL, y = "Share of all records"
+  ) +
+  theme_report()
+
+add_report_watermark(age_plot)
+```
+
+\clearpage
+
+## Recorded sex
+
+```{r sex-distribution, fig.height=4.4, fig.cap="Recorded-sex distribution for victim and known-offender records, 2006-2026 snapshot. Shares use all cleaned records for each table, including unknown or missing values. Source: NYC Open Data victim and offender tables."}
+sex_levels <- c("FEMALE", "MALE", "INTERSEX", "Unknown or missing")
+sex_plot_data <- demographic_display |>
+  dplyr::filter(field == "recorded_sex") |>
+  dplyr::mutate(display_value = factor(display_value, levels = rev(sex_levels)))
+
+sex_plot <- ggplot2::ggplot(sex_plot_data,
+                           ggplot2::aes(x = display_value, y = share, fill = entity_label)) +
+  ggplot2::geom_col(position = "dodge", width = 0.68) +
+  ggplot2::coord_flip() +
+  report_fill_scale() +
+  ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  ggplot2::labs(
+    title = "Most records list male in the recorded-sex field",
+    subtitle = "Known-offender records also contain a visible unknown category",
+    x = NULL, y = "Share of all records"
+  ) +
+  theme_report()
+
+add_report_watermark(sex_plot)
+```
+
+\clearpage
+
+## Recorded race
+
+The comparison retains every published category and includes unknown or missing records in each table's denominator.
+
+```{r race-distribution, fig.height=5.2, fig.cap="Recorded-race distribution for victim and known-offender records, 2006-2026 snapshot. Shares use all cleaned records for each table, including unknown or missing values. These are administrative counts, not population rates. Source: NYC Open Data victim and offender tables."}
+race_labels <- c(
+  "AMERICAN INDIAN/ALASKAN NATIVE" = "American Indian / Alaska Native",
+  "ASIAN / PACIFIC ISLANDER" = "Asian / Pacific Islander",
+  "BLACK" = "Black", "BLACK HISPANIC" = "Black Hispanic",
+  "WHITE" = "White", "WHITE HISPANIC" = "White Hispanic",
+  "Unknown or missing" = "Unknown or missing"
+)
+race_order <- c("American Indian / Alaska Native", "Asian / Pacific Islander", "Black",
+                "Black Hispanic", "White", "White Hispanic", "Unknown or missing")
+race_plot_data <- demographic_display |>
+  dplyr::filter(field == "recorded_race") |>
+  dplyr::mutate(
+    display_label = dplyr::recode(display_value, !!!race_labels),
+    display_label = factor(display_label, levels = rev(race_order))
+  )
+
+race_plot <- ggplot2::ggplot(race_plot_data,
+                            ggplot2::aes(x = display_label, y = share, fill = entity_label)) +
+  ggplot2::geom_col(position = "dodge", width = 0.68) +
+  ggplot2::coord_flip() +
+  report_fill_scale() +
+  ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  ggplot2::labs(
+    title = "Recorded race describes records, not population risk",
+    subtitle = "The chart describes published records; it does not estimate group risk or propensity",
+    x = NULL, y = "Share of all records"
+  ) +
+  theme_report()
+
+add_report_watermark(race_plot)
+```
+
+The demographic distributions are useful for describing what the administrative tables contain. Interpreting them as a comparison of population risk would require defensible exposure and population denominators, coverage assumptions, and causal context that these record counts do not provide.
+
+\clearpage
+
+# Contextual factors and explanatory limits
+
+The original report left four related questions unfinished: season, weather, holidays, and salient public events. This rebuild completes them with four pinned sources retrieved on `r contextual_retrieved`. The earlier working files remain in the repository as provenance but are not analytical inputs: their coverage, units, selection rules, or origins were incomplete.
+
+```{r contextual-source-table, results='asis'}
+context_source_display <- data.frame(
+  Source = c(
+    "NOAA Central Park daily summaries",
+    "Federal holiday calendar",
+    "ESPN and MLB championship schedules",
+    "Crowd Counting Consortium"
+  ),
+  Universe = c(
+    "One row per calendar day, 2006-2025",
+    "Actual dates of federal holidays, 2006-2025",
+    "Every Super Bowl, NBA Finals game, and World Series game, 2006-2025",
+    "In-person NYC political-crowd records, 2017-2025"
+  ),
+  Coverage = c(
+    paste0(weather_coverage$start_date[[1]], " to ", weather_coverage$end_date[[1]]),
+    paste0(contextual_event_coverage$start_date[contextual_event_coverage$dataset == "federal_holidays"],
+           " to ", contextual_event_coverage$end_date[contextual_event_coverage$dataset == "federal_holidays"]),
+    paste0(contextual_event_coverage$start_date[contextual_event_coverage$dataset == "championship_games"],
+           " to ", contextual_event_coverage$end_date[contextual_event_coverage$dataset == "championship_games"]),
+    paste0(contextual_event_coverage$start_date[contextual_event_coverage$dataset == "political_crowds"],
+           " to ", contextual_event_coverage$end_date[contextual_event_coverage$dataset == "political_crowds"])
+  ),
+  stringsAsFactors = FALSE
+)
+knitr::kable(
+  context_source_display, format = report_table_format, booktabs = report_is_latex,
+  caption = "The four contextual sampling frames used in the completed analyses.",
+  align = if (report_is_latex) c("l", "p{7.0cm}", "l") else c("l", "l", "l")
+)
+```
+
+The designs answer associations, not causes. Seasonal rates divide by observed calendar days. Temperature uses a daily Poisson model with year, month, and weekday fixed effects and 14-day heteroskedasticity-and-autocorrelation-consistent uncertainty. Holiday and championship dates are compared with non-event dates on the same weekday, in the same year, within four weeks. Political-crowd days use the source's 2017-2025 boundary and a calendar-adjusted model because recorded events occupy most days in that period.
+
+## From recurring season to specific calendar days
+
+```{r calendar-context-triptych, fig.height=7.8, fig.cap="Three linked views of calendar context, 2006-2025 complete years. Top: incidents per observed calendar day by season. Middle: temperature-bin incident-rate ratios after year, month, and weekday controls; 15 to below 20 C is the reference. Bottom: mean incident difference on each federal holiday's actual date versus same-weekday controls within four weeks and the same year. Lines show 95% intervals. Source: NYPD shootings, NOAA Central Park daily summaries, and the federal holiday calendar."}
+season_plot_data <- seasonal_summary |>
+  dplyr::mutate(season = factor(season, levels = rev(c("Winter", "Spring", "Summer", "Autumn"))))
+
+season_context_plot <- ggplot2::ggplot(
+  season_plot_data,
+  ggplot2::aes(x = incidents_per_calendar_day, y = season)
+) +
+  ggplot2::geom_errorbarh(
+    ggplot2::aes(xmin = rate_lower_95, xmax = rate_upper_95),
+    height = 0.2, colour = report_colours[["slate"]]
+  ) +
+  ggplot2::geom_col(width = 0.58, fill = report_colours[["teal"]], alpha = 0.9) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = fmt_decimal(incidents_per_calendar_day)),
+    hjust = -0.18, size = 2.7, colour = report_colours[["ink"]]
+  ) +
+  ggplot2::scale_x_continuous(limits = c(0, 4.9), expand = ggplot2::expansion(mult = c(0, 0))) +
+  ggplot2::labs(
+    title = "1. The recurring calendar pattern",
+    subtitle = "Summer remains highest after unequal season length is removed",
+    x = "Incidents per calendar day", y = NULL
+  ) +
+  theme_report(9) +
+  ggplot2::theme(legend.position = "none", plot.margin = ggplot2::margin(4, 8, 4, 8))
+
+temperature_plot_data <- weather_temperature_bins |>
+  dplyr::mutate(
+    temperature_bin = factor(
+      temperature_bin,
+      levels = rev(c("Below 0", "0 to <5", "5 to <10", "10 to <15",
+                     "15 to <20", "20 to <25", "25 or above"))
+    )
+  )
+
+temperature_context_plot <- ggplot2::ggplot(
+  temperature_plot_data,
+  ggplot2::aes(x = adjusted_incidence_rate_ratio, y = temperature_bin)
+) +
+  ggplot2::geom_vline(xintercept = 1, colour = report_colours[["mist"]], linewidth = 0.7) +
+  ggplot2::geom_errorbarh(
+    ggplot2::aes(xmin = lower_95, xmax = upper_95),
+    height = 0.18, colour = report_colours[["slate"]]
+  ) +
+  ggplot2::geom_point(size = 2.4, colour = report_colours[["orange"]]) +
+  ggplot2::labs(
+    title = "2. The pattern persists within calendar controls",
+    subtitle = paste0(
+      "A 5 C increase corresponds to IRR ", fmt_decimal(temperature_result$incidence_rate_ratio, 0.01),
+      " [", fmt_decimal(temperature_result$lower_95, 0.01), ", ",
+      fmt_decimal(temperature_result$upper_95, 0.01), "]"
+    ),
+    x = "Adjusted incident-rate ratio", y = "Average temperature (C)"
+  ) +
+  theme_report(9) +
+  ggplot2::theme(legend.position = "none", plot.margin = ggplot2::margin(4, 8, 4, 8))
+
+holiday_plot_data <- holiday_match_summary |>
+  dplyr::filter(category != "All included dates") |>
+  dplyr::mutate(
+    holiday_label = dplyr::recode(
+      category,
+      "Birthday of Martin Luther King, Jr." = "Martin Luther King Jr. Day",
+      "Juneteenth National Independence Day" = "Juneteenth",
+      "Washington's Birthday" = "Washington's Birthday"
+    ),
+    holiday_label = stats::reorder(holiday_label, paired_difference)
+  )
+
+holiday_context_plot <- ggplot2::ggplot(
+  holiday_plot_data,
+  ggplot2::aes(x = paired_difference, y = holiday_label)
+) +
+  ggplot2::geom_vline(xintercept = 0, colour = report_colours[["mist"]], linewidth = 0.7) +
+  ggplot2::geom_errorbarh(
+    ggplot2::aes(xmin = difference_lower_95, xmax = difference_upper_95),
+    height = 0.18, colour = report_colours[["slate"]]
+  ) +
+  ggplot2::geom_point(size = 2.3, colour = report_colours[["ochre"]]) +
+  ggplot2::labs(
+    title = "3. Named holidays are not one interchangeable exposure",
+    subtitle = "Bootstrap intervals use matched holiday dates as the resampling unit",
+    x = "Mean incident difference from matched weekdays", y = NULL,
+    caption = "Arthur Dominic Blanc"
+  ) +
+  theme_report(9) +
+  ggplot2::theme(legend.position = "none", plot.margin = ggplot2::margin(4, 8, 4, 8))
+
+grid::grid.newpage()
+layout <- grid::grid.layout(
+  nrow = 3, ncol = 1,
+  heights = grid::unit(c(1.0, 1.35, 2.05), "null")
+)
+grid::pushViewport(grid::viewport(layout = layout))
+print(season_context_plot, vp = grid::viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(temperature_context_plot, vp = grid::viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(holiday_context_plot, vp = grid::viewport(layout.pos.row = 3, layout.pos.col = 1))
+```
+
+The three views narrow the question. First, the summer concentration survives a fair calendar denominator. Second, days that are warmer than other days in the same month and year still have higher recorded counts on average. Third, replacing a broad season with named dates reveals heterogeneity: New Year's Day, Labor Day, Independence Day, and Memorial Day have the largest positive matched differences, while several other federal holidays have intervals crossing zero. The overall holiday difference is `r fmt_decimal(holiday_overall$paired_difference)` incidents per day (bootstrap 95% interval `r fmt_decimal(holiday_overall$difference_lower_95)` to `r fmt_decimal(holiday_overall$difference_upper_95)`). These patterns can motivate hypotheses; they do not identify a weather or holiday mechanism.
+
+\clearpage
+
+## Championship dates: three series, no common direction
+
+The original sports file implicitly defined a narrow but coherent universe: nationally salient championship games, rather than every New York sporting event. The rebuild independently reconstructs that universe for every year from 2006 through 2025: `r fmt_int(sum(sports_series$matched_event_days))` game dates across the Super Bowl, NBA Finals, and World Series. This answers the original question without pretending that the dates measure attendance, local venue activity, or all sports exposure.
+
+```{r championship-triptych, fig.height=4.2, fig.cap="Mean daily NYPD-recorded shooting incidents on championship-game dates and on same-weekday non-game controls within four weeks and the same year, 2006-2025. Each panel is a complete 20-year series: 20 Super Bowls, 114 NBA Finals games, and 115 World Series games. Source: ESPN scoreboard and MLB Stats API schedules."}
+sports_plot_data <- dplyr::bind_rows(
+  sports_series |>
+    dplyr::transmute(
+      category, comparison = "Championship date",
+      incidents_per_day = event_incidents_per_day
+    ),
+  sports_series |>
+    dplyr::transmute(
+      category, comparison = "Matched same weekday",
+      incidents_per_day = matched_control_incidents_per_day
+    )
+) |>
+  dplyr::mutate(
+    category = factor(category, levels = c("Super Bowl", "NBA Finals", "World Series"))
+  )
+
+sports_context_plot <- ggplot2::ggplot(
+  sports_plot_data,
+  ggplot2::aes(x = comparison, y = incidents_per_day, fill = comparison)
+) +
+  ggplot2::geom_col(width = 0.64, show.legend = FALSE) +
+  ggplot2::geom_text(
+    ggplot2::aes(label = fmt_decimal(incidents_per_day, 0.01)),
+    vjust = -0.3, size = 2.8, colour = report_colours[["ink"]]
+  ) +
+  ggplot2::facet_wrap(~category, nrow = 1) +
+  ggplot2::scale_fill_manual(values = c(
+    "Championship date" = report_colours[["orange"]],
+    "Matched same weekday" = report_colours[["teal"]]
+  )) +
+  ggplot2::scale_y_continuous(limits = c(0, 4.65), expand = ggplot2::expansion(mult = c(0, 0))) +
+  ggplot2::labs(
+    title = "One event label does not create one common pattern",
+    subtitle = "NBA Finals dates are lower than their controls; the Super Bowl is nearly even; World Series dates are higher",
+    x = NULL, y = "Incidents per day"
+  ) +
+  theme_report(9) +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 28, hjust = 1),
+    strip.text = ggplot2::element_text(face = "bold")
+  )
+
+add_report_watermark(sports_context_plot)
+```
+
+The pooled difference is `r fmt_decimal(sports_overall$paired_difference, 0.01)` incidents per day (bootstrap 95% interval `r fmt_decimal(sports_overall$difference_lower_95, 0.01)` to `r fmt_decimal(sports_overall$difference_upper_95, 0.01)`). The three series do not point in a common direction. A pooled “sports effect” would therefore conceal more than it explains, and none of these descriptive comparisons can establish that a game changed shooting incidence.
+
+## Political-crowd days: comprehensive phases, saturated exposure
+
+The hand-selected protest file mixed protests with elections, disasters, court rulings, and unrelated public events. It is not used. The replacement combines all three official Crowd Counting Consortium phases and keeps in-person records assigned to New York City localities or counties. The final snapshot contains `r fmt_int(contextual_event_coverage$records[contextual_event_coverage$dataset == "political_crowds"])` event records on `r fmt_int(contextual_event_coverage$distinct_days[contextual_event_coverage$dataset == "political_crowds"])` distinct days.
+
+```{r political-coverage, fig.height=4.8, fig.cap="Calendar-day coverage of the Crowd Counting Consortium New York City subset, 2017-2025. A day is an event day when at least one in-person political crowd record is present. Record density and collection phases change over time; the chart describes the source's exposure coverage, not the amount or intensity of political activity. Source: CCC Harvard Dataverse phases 2017-2020, 2021-2024, and 2025."}
+protest_coverage_plot_data <- dplyr::bind_rows(
+  protest_coverage_by_year |>
+    dplyr::transmute(year, day_type = "At least one CCC event", days = event_days),
+  protest_coverage_by_year |>
+    dplyr::transmute(year, day_type = "No CCC event", days = non_event_days)
+)
+
+political_coverage_plot <- ggplot2::ggplot(
+  protest_coverage_plot_data,
+  ggplot2::aes(x = factor(year), y = days, fill = day_type)
+) +
+  ggplot2::geom_col(width = 0.72) +
+  ggplot2::scale_fill_manual(values = c(
+    "At least one CCC event" = report_colours[["teal"]],
+    "No CCC event" = report_colours[["mist"]]
+  )) +
+  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0.03))) +
+  ggplot2::labs(
+    title = "Political-crowd exposure occupies most days; coverage changes",
+    subtitle = paste0(
+      fmt_int(protest_result$event_days), " event days versus ",
+      fmt_int(protest_result$non_event_days), " non-event days; adjusted IRR ",
+      fmt_decimal(protest_result$incidence_rate_ratio, 0.01), " [",
+      fmt_decimal(protest_result$lower_95, 0.01), ", ",
+      fmt_decimal(protest_result$upper_95, 0.01), "]"
+    ),
+    x = NULL, y = "Calendar days", fill = NULL
+  ) +
+  theme_report(9)
+
+add_report_watermark(political_coverage_plot)
+```
+
+The adjusted comparison uses every day from 2017 through 2025 and controls for year, month, and weekday. Its rate ratio is `r fmt_decimal(protest_result$incidence_rate_ratio, 0.01)` (95% interval `r fmt_decimal(protest_result$lower_95, 0.01)` to `r fmt_decimal(protest_result$upper_95, 0.01)`). A stricter same-weekday sensitivity could match only `r fmt_int(protest_matched$matched_event_days)` of the `r fmt_int(protest_result$event_days)` event days because non-event dates are scarce. Neither result should be read as a protest effect. Newsworthiness, source discovery, record finalisation, the number and size of events, policing, neighbourhood, and other conditions can all vary with both event recording and shootings.
+
+# Forecasting experiment
+
+The original project selected Prophet first and then planned empty ARIMA, XGBoost, and GARCH sections around it. This rebuild reverses that hierarchy. The forecasting question comes first; the model must earn its position by forecasting unseen days better than simple alternatives.
+
+The operational target is deliberately narrow: predict daily citywide incident counts 14 and 28 days ahead. Model structure was selected using March, June, and September month-end origins from 2018-2021. The publication comparison then freezes that structure and evaluates twelve untouched origins from 2022-2025. Every origin trains only on the data available on that date. Mean absolute error (MAE) is the main ranking measure because it remains in incidents per day; root mean squared error, signed mean error, and interval coverage remain in the evidence files.
+
+## Preferred model: a dynamic count ensemble
+
+The proposed model combines two deliberately different views of the near future. Seventy-five percent comes from a recent 28-day local level with a half-shrunk weekday adjustment. Twenty-five percent comes from a regularised five-year log-autoregression using lags of 1, 7, and 14 days, rolling means, weekday indicators, and annual Fourier terms. A negative-binomial observation layer supplies non-negative predictive intervals and allows the variance to exceed the mean.
+
+```{r forecast-story, fig.height=8.2, fig.cap="Three linked views of the forecasting decision. Top: the preferred dynamic count ensemble combines a recent local level with a regularised recursive autoregression, then places a negative-binomial predictive distribution around the result. Middle: mean absolute error across twelve untouched rolling origins; lower is better. Bottom: the final evaluation origin, 30 September 2025, forecasting the next 28 days; the shaded area is the model's nominal 80% interval. Source: maintained daily incident series and leakage-safe forecast evaluation."}
+forecast_anatomy_plot <- ggplot2::ggplot() +
+  ggplot2::annotate("rect", xmin = 0.3, xmax = 2.8, ymin = 2.3, ymax = 3.7,
+                    fill = report_colours[["teal"]], alpha = 0.95) +
+  ggplot2::annotate("rect", xmin = 0.3, xmax = 2.8, ymin = 0.3, ymax = 1.7,
+                    fill = report_colours[["orange"]], alpha = 0.95) +
+  ggplot2::annotate("rect", xmin = 4.0, xmax = 6.5, ymin = 1.3, ymax = 2.7,
+                    fill = report_colours[["paper"]], colour = report_colours[["ink"]]) +
+  ggplot2::annotate("rect", xmin = 7.7, xmax = 9.8, ymin = 1.3, ymax = 2.7,
+                    fill = report_colours[["mist"]], colour = report_colours[["slate"]]) +
+  ggplot2::annotate("segment", x = 2.9, xend = 3.9, y = 3.0, yend = 2.25,
+                    colour = report_colours[["slate"]],
+                    arrow = grid::arrow(length = grid::unit(0.12, "inches"))) +
+  ggplot2::annotate("segment", x = 2.9, xend = 3.9, y = 1.0, yend = 1.75,
+                    colour = report_colours[["slate"]],
+                    arrow = grid::arrow(length = grid::unit(0.12, "inches"))) +
+  ggplot2::annotate("segment", x = 6.6, xend = 7.6, y = 2.0, yend = 2.0,
+                    colour = report_colours[["slate"]],
+                    arrow = grid::arrow(length = grid::unit(0.12, "inches"))) +
+  ggplot2::annotate("text", x = 1.55, y = 3.1, label = "75% LOCAL LEVEL\n28 days + weekday", colour = "white", size = 3.2, fontface = "bold") +
+  ggplot2::annotate("text", x = 1.55, y = 1.1, label = "25% LOG-AR\nlags + rolling + calendar", colour = "white", size = 2.8, fontface = "bold") +
+  ggplot2::annotate("text", x = 5.25, y = 2.0, label = "DYNAMIC COUNT\nPOINT FORECAST", colour = report_colours[["ink"]], size = 3.2, fontface = "bold") +
+  ggplot2::annotate("text", x = 8.75, y = 2.0, label = "NEGATIVE-BINOMIAL\n80% INTERVAL", colour = report_colours[["ink"]], size = 3.0, fontface = "bold") +
+  ggplot2::coord_cartesian(xlim = c(0, 10.1), ylim = c(0, 4), clip = "off") +
+  ggplot2::labs(
+    title = "1. Forecast the count as a count",
+    subtitle = "Recent level adapts; calendar structure stabilises; the interval admits overdispersion"
+  ) +
+  ggplot2::theme_void() +
+  ggplot2::theme(
+    plot.title = ggplot2::element_text(colour = report_colours[["ink"]], face = "bold", size = 12),
+    plot.subtitle = ggplot2::element_text(colour = report_colours[["slate"]], size = 8.5),
+    plot.margin = ggplot2::margin(4, 8, 4, 8)
+  )
+
+forecast_model_labels <- c(
+  dynamic_count_ensemble = "Dynamic count ensemble",
+  autoregressive_log_ridge = "Log autoregression",
+  rolling_mean_28 = "28-day mean",
+  prophet = "Prophet",
+  poisson_calendar = "Poisson calendar",
+  seasonal_naive_7 = "7-day seasonal naive"
+)
+
+forecast_performance_data <- forecast_metrics_summary |>
+  dplyr::filter(model %in% names(forecast_model_labels)) |>
+  dplyr::mutate(
+    model_label = unname(forecast_model_labels[model]),
+    horizon_label = paste0(horizon_days, " days")
+  ) |>
+  dplyr::group_by(model_label) |>
+  dplyr::mutate(mean_model_mae = mean(mae)) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(model_label = stats::reorder(model_label, -mean_model_mae))
+
+forecast_performance_plot <- ggplot2::ggplot(
+  forecast_performance_data,
+  ggplot2::aes(x = mae, y = model_label, colour = horizon_label, group = model_label)
+) +
+  ggplot2::geom_line(colour = report_colours[["mist"]], linewidth = 1.0) +
+  ggplot2::geom_point(size = 2.5) +
+  ggplot2::scale_colour_manual(values = c(
+    "14 days" = report_colours[["ochre"]],
+    "28 days" = report_colours[["teal"]]
+  )) +
+  ggplot2::scale_x_continuous(limits = c(1.3, 2.15), breaks = seq(1.4, 2.1, 0.2)) +
+  ggplot2::labs(
+    title = "2. The proposed model is strongest overall across both horizons",
+    subtitle = "Mean absolute error across twelve untouched 2022-2025 origins; lower is better",
+    x = "Mean absolute error (incidents per day)", y = NULL, colour = NULL
+  ) +
+  theme_report(8.5) +
+  ggplot2::theme(legend.position = "top", plot.margin = ggplot2::margin(4, 8, 4, 8))
+
+forecast_example_actual <- forecast_example |>
+  dplyr::distinct(date, actual)
+forecast_example_lines <- forecast_example |>
+  dplyr::mutate(
+    model_label = dplyr::recode(
+      model,
+      dynamic_count_ensemble = "Dynamic count ensemble",
+      prophet = "Prophet",
+      rolling_mean_28 = "28-day mean"
+    )
+  )
+forecast_example_interval <- forecast_example |>
+  dplyr::filter(model == "dynamic_count_ensemble")
+
+forecast_example_plot <- ggplot2::ggplot() +
+  ggplot2::geom_ribbon(
+    data = forecast_example_interval,
+    ggplot2::aes(x = date, ymin = lower_80, ymax = upper_80),
+    fill = report_colours[["mist"]], alpha = 0.65
+  ) +
+  ggplot2::geom_line(
+    data = forecast_example_actual,
+    ggplot2::aes(x = date, y = actual, colour = "Observed"), linewidth = 0.8
+  ) +
+  ggplot2::geom_line(
+    data = forecast_example_lines,
+    ggplot2::aes(x = date, y = prediction, colour = model_label), linewidth = 0.65
+  ) +
+  ggplot2::scale_colour_manual(values = c(
+    "Observed" = report_colours[["ink"]],
+    "Dynamic count ensemble" = report_colours[["orange"]],
+    "Prophet" = report_colours[["teal"]],
+    "28-day mean" = report_colours[["slate"]]
+  )) +
+  ggplot2::scale_x_date(date_breaks = "1 week", date_labels = "%d %b") +
+  ggplot2::labs(
+    title = "3. A forecast is a bounded decision aid, not a crystal ball",
+    subtitle = paste0("Final rolling origin: ", format(forecast_example_origin, "%d %B %Y")),
+    x = NULL, y = "Daily incidents", colour = NULL,
+    caption = "Arthur Dominic Blanc"
+  ) +
+  theme_report(8.5) +
+  ggplot2::theme(legend.position = "top", plot.margin = ggplot2::margin(4, 8, 4, 8))
+
+grid::grid.newpage()
+forecast_layout <- grid::grid.layout(
+  nrow = 3, ncol = 1,
+  heights = grid::unit(c(1.0, 1.35, 1.55), "null")
+)
+grid::pushViewport(grid::viewport(layout = forecast_layout))
+print(forecast_anatomy_plot, vp = grid::viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(forecast_performance_plot, vp = grid::viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(forecast_example_plot, vp = grid::viewport(layout.pos.row = 3, layout.pos.col = 1))
+```
+
+At 14 days, the preferred model's MAE is `r fmt_decimal(primary_forecast_metrics$mae[primary_forecast_metrics$horizon_days == 14], 0.01)` incidents per day: `r fmt_decimal(primary_forecast_metrics$mae_lift_vs_best_naive_pct[primary_forecast_metrics$horizon_days == 14], 0.1)`% better than the strongest predeclared naive benchmark and `r fmt_decimal(primary_forecast_metrics$mae_lift_vs_prophet_pct[primary_forecast_metrics$horizon_days == 14], 0.1)`% better than Prophet. At 28 days, its MAE is `r fmt_decimal(primary_forecast_metrics$mae[primary_forecast_metrics$horizon_days == 28], 0.01)`, an improvement of `r fmt_decimal(primary_forecast_metrics$mae_lift_vs_best_naive_pct[primary_forecast_metrics$horizon_days == 28], 0.1)`% over the best naive benchmark and `r fmt_decimal(primary_forecast_metrics$mae_lift_vs_prophet_pct[primary_forecast_metrics$horizon_days == 28], 0.1)`% over Prophet.
+
+The nominal 80% intervals cover `r fmt_pct(primary_forecast_metrics$interval_80_coverage[primary_forecast_metrics$horizon_days == 14], 0.1)` and `r fmt_pct(primary_forecast_metrics$interval_80_coverage[primary_forecast_metrics$horizon_days == 28], 0.1)` of observations. They are conservative rather than perfectly calibrated. The point errors are also operationally meaningful: an average miss of roughly 1.4-1.5 incidents per day is not precise enough to allocate personnel to a specific precinct or to claim that a short-term spike is known in advance. The model is preferred for this citywide report, not certified for deployment.
+
+## The models we also explored
+
+Prophet remains because it was the original selection, but it is no longer the lead model. Its 14-day MAE is `r fmt_decimal(prophet_forecast_metrics$mae[prophet_forecast_metrics$horizon_days == 14], 0.01)` and its 28-day MAE is `r fmt_decimal(prophet_forecast_metrics$mae[prophet_forecast_metrics$horizon_days == 28], 0.01)`. It loses to the dynamic count ensemble and to the 28-day mean at both horizons. This supersedes the original in-sample visual judgement with a chronological comparison; it does not declare Prophet universally unsuitable.
+
+```{r forecast-candidate-table, results='asis'}
+candidate_table <- data.frame(
+  Candidate = c(
+    "Dynamic count ensemble",
+    "28-day rolling mean",
+    "Log autoregression / ARIMA inquiry",
+    "Poisson calendar regression",
+    "Prophet",
+    "XGBoost v1 inquiry",
+    "GARCH inquiry"
+  ),
+  Status = c(
+    "Preferred",
+    "Evaluated benchmark",
+    "Evaluated corrected alternative",
+    "Evaluated count model",
+    "Evaluated original choice",
+    "Not promoted for Part 1",
+    "Design reviewed; replaced for this task"
+  ),
+  Finding = c(
+    "Lowest average MAE across both horizons; non-negative count forecast with intervals",
+    "Difficult benchmark to beat; confirms that recent level carries most short-horizon signal",
+    "Strongest 28-day point MAE by a negligible margin, but weaker at 14 days and biased low",
+    "Respects the count scale but adapts too slowly to the post-2021 level",
+    "Original model; worse than the naive benchmark and preferred model at both horizons",
+    "Date and recursive lag features alone do not justify added complexity for this citywide forecast; the larger contextual design is deferred to a separate document",
+    "A volatility model is not a daily count-mean model; negative-binomial dispersion answers the interval question directly"
+  ),
+  stringsAsFactors = FALSE
+)
+knitr::kable(
+  candidate_table, format = report_table_format, booktabs = report_is_latex,
+  align = if (report_is_latex) {
+    c("p{3.0cm}", "p{3.3cm}", "p{6.5cm}")
+  } else {
+    c("l", "l", "l")
+  }
+)
+```
+
+ARIMA, XGBoost, and GARCH therefore do not disappear from the rebuild. Their Part 1 questions are answered. The autoregressive idea becomes an evaluated component of the preferred model. A bounded XGBoost model using only dates and recursively generated lags offers no clear evidential advantage over the simpler evaluated models. The volatility question is handled on the count scale through negative-binomial predictive dispersion rather than a continuous-return GARCH model.
+
+## XGBoost v2: reserved for Part 2
+
+The more ambitious XGBoost question is not rejected; it is larger than this report. It would combine the NYPD series with point-in-time contextual streams describing weather, movement, public events, infrastructure disruption, news, and wider societal conditions. Constructing those features without future leakage requires a separately documented source inventory, historical ingestion strategy, data model, licensing review, and spatiotemporal evaluation design. That work will be explored in a separate document rather than compressed into this completed exploratory report.
+
+## Data-platform feasibility
+
+The original report also left SQL Server, Azure, and “big data” as empty headings. At the present scale, the answer is architectural restraint. The pinned project contains tens of thousands of records and a daily analytical series of only 7,305 complete-year observations. It does not need a distributed data platform to render a reproducible report.
+
+```{r infrastructure-table, results='asis'}
+infrastructure_table <- data.frame(
+  Stage = c("Current report", "Automated refresh", "Shared operational service", "Distributed big-data platform"),
+  Appropriate.design = c(
+    "Pinned CSV/JSON evidence, Python analysis, and reproducible PDF rendering",
+    "Scheduled acquisition plus a small relational store with raw, core, mart, and audit schemas",
+    "SQL Server or Azure SQL only when multiple users, access control, monitoring, and service continuity become real requirements",
+    "Not justified for this report; evaluate separately if Part 2 ingests high-volume, heterogeneous, time-sensitive contextual streams"
+  ),
+  Decision = c("Keep", "Future option", "Conditional option", "Separate study"),
+  stringsAsFactors = FALSE
+)
+names(infrastructure_table)[[2L]] <- "Appropriate design"
+knitr::kable(
+  infrastructure_table, format = report_table_format, booktabs = report_is_latex,
+  align = if (report_is_latex) c("l", "p{8.2cm}", "l") else c("l", "l", "l")
+)
+```
+
+If the work becomes an automated service, a relational design should preserve the same units already enforced here: immutable raw snapshots; separate incident, victim, and known-offender core tables; daily and geographic analytical marts; forecast-origin and prediction tables; and a manifest/audit layer containing source URLs, retrieval times, hashes, and validation outcomes. Azure SQL is a possible managed implementation, not a methodological upgrade. No cloud resource, SQL Server instance, or distributed platform was created for this report. A materially larger platform may be justified by XGBoost v2, but that decision belongs to Part 2 and must be based on its source volume, update cadence, history, and reproducibility requirements.
+
+# Limitations, lessons, and further work
+
+The verified core has several boundaries:
+
+- It describes NYPD administrative records, not every shooting or every affected person.
+- Incident, victim, and known-offender tables answer different questions and have different coverage.
+- Known-offender information is incomplete and potentially non-random; it is not evidence of conviction.
+- Calendar, borough, and demographic patterns are descriptive. They do not establish mechanisms or policy effects.
+- The 2020 borough rates use one matching population denominator and should not be extrapolated across the entire series.
+- Boroughs are broad aggregations that conceal neighbourhood variation and changing exposure.
+- The 2020 tract-income analysis is ecological. ACS estimates carry sampling uncertainty, observed tract rates can be unstable, neighbouring tracts are not statistically independent, and the association does not identify individual exposure or a causal mechanism.
+- The coordinate map shows accumulated recorded incidents without a time-varying local population denominator. Point density is not personal risk.
+- Fatal-incident known-offender analyses cover only incidents with at least one linked published record; one in three fatal incidents has no such link in this snapshot.
+- Central Park is one fixed weather station; it does not measure block-level conditions at every incident location. The temperature model controls broad calendar structure but not every time-varying factor associated with weather and shootings.
+- Federal holidays are a defined legal calendar, not every culturally important date in New York. Holiday estimates are repeated-date associations and named-holiday samples are small.
+- Championship dates describe three nationally salient series, not all sports, local attendance, home-team participation, or event intensity. Their matched comparisons are not causal effects.
+- Crowd Counting Consortium coverage begins in 2017, changes across collection phases, depends on publicly discoverable reports, and occupies most calendar days in the NYC subset. An event-day indicator cannot represent the number, size, location, claim, or policing of those events.
+- Forecast accuracy is evaluated at twelve 2022-2025 origins after model selection on 2018-2021 origins. That is stronger than an in-sample fit but remains a modest evaluation sample spanning one recent regime. The primary model's nominal 80% interval is conservative, and citywide accuracy does not establish precinct-level usefulness.
+- No weather, event, or political-crowd variable enters the forecast because its future value or reporting process is not reliably known at the forecast origin. Associative context is not automatically a leakage-safe predictor.
+- The author is interpreting public administrative data without claiming local institutional or lived-experience authority.
+- The partial 2026 record may change as later periods are published and must not be mixed with complete years.
+
+The main lesson carried from the original analysis is simple: verify the unit of observation before naming a count. The rebuild now uses the shootings table for incidents, the victim table for victim records, and the offender table for known-offender records. Most of the original questions survive; their denominators and claims become more precise.
+
+The maintained analysis, report figures, and numerical claims reconcile with the pinned evidence layer described in the appendix.
+
+\clearpage
+
+# Conclusion
+
+The rebuilt report preserves the original project's intended direction while replacing fragile counts with maintained analytical units. Across complete years, the record shows a long decline, a sharp 2020 discontinuity, and another decline through 2025. The first half of 2026 is slightly below the equivalent 2025 window. Summer, weekends, and late-night hours contain more recorded incidents after fair calendar denominators are applied. Matching 2020 denominators changes borough, precinct, and tract questions from raw rankings into bounded rate comparisons. Within that common 2020 frame, recorded incident rates fall across higher-income tract quartiles and have a negative rank association with tract median household income; the relationship remains ecological and non-causal.
+
+The person tables answer narrower questions than the incident table. Fatal incidents and fatal victim records are different measures. Known-offender distributions cover only published linked records, and one in three fatal incidents has no such link in this snapshot. Those absences are part of the finding, not rows to hide before plotting demographics.
+
+Context becomes useful only after its sampling frame is explicit. Season, temperature, named holidays, three championship series, and political-crowd days do not collapse into one common effect. Their patterns are heterogeneous, their coverage differs, and every estimate remains associative.
+
+Forecasting reaches a similarly bounded conclusion. A dynamic count ensemble supersedes Prophet in this report because it better matches the data-generating scale and produced lower rolling-origin error at both operational horizons. Yet an average error near one and a half incidents per day, conservative intervals, and a citywide target leave a large gap between “best evaluated here” and “ready to direct operations.” The honest result is useful but modest: the near future has some predictable local level and calendar structure, while much of the day-to-day variation remains unresolved.
+
+The central lesson is therefore not that one sophisticated method rescued the old report. It is that the questions survived once their units, denominators, source universes, comparison windows, and uncertainty were made explicit. That is what turns the unfinished graduate exercise into a defensible exploratory report.
+
+\clearpage
+
+# How this report was made: operator, agents, and evidence
+
+## The project before the agents
+
+The research question, original report, source archive, and ambition began with Arthur Dominic Blanc. The early project was intentionally larger than the course checklist. It explored not only the supplied shooting record but also weather, public events, forecasting, and possible data-platform directions. The author later described the governing instinct plainly: graduate work should feel like a real project, not a demonstration that isolated aircraft parts can be assembled.
+
+That ambition produced useful questions and an unfinished evidence system. The original report mislabeled victim-record rows as shooting incidents, left several contextual sources under-documented, relied too heavily on an in-sample Prophet view, and sometimes stretched descriptive patterns toward explanation. The rebuild did not begin with a blank prompt. It began with those authored choices, mistakes, files, and unresolved questions.
+
+## What the operator directed
+
+The operator's role was not limited to requesting a polished document. Arthur Dominic Blanc:
+
+- supplied the original reports, code, datasets, feedback, and project history;
+- insisted that the incident key and analytical unit be treated as foundational evidence;
+- required the refreshed edition to preserve the original ambition without preserving unsupported conclusions;
+- chose the public byline and visual relationship to ardrblanc.com;
+- set boundaries around causality, demographic interpretation, publication, and disclosure;
+- corrected omissions and rejected work that looked impressive but displaced the useful deliverable;
+- approved the distinction between the completed Part 1 report and the separate contextual XGBoost v2 programme; and
+- retained authority over every public claim and the decision to publish.
+
+Those directions changed the work. When an early rebuild treated presentation as success while leaving a material issue outside the useful artifact, the operator required the deliverable first and the critique second. When prerequisites or local tools were missing, the operator required explicit notice rather than silent installation. These were not cosmetic preferences; they became part of the report's evidence and production discipline.
+
+## What the AI systems contributed
+
+AI assistance operated across more than one period and system. The project credits OpenAI GPT-3 and Anthropic Claude Opus 4 for owner-identified work on or around the original report. Arthur Dominic Blanc's named **Codex-1** agent and later OpenAI Codex sessions supported the rebuild. The GPT-5.6 family - Sol, Terra, and Luna - is credited for agent work including repository inspection, data auditing, implementation, test construction, source reconciliation, visual design, draft prose, packaging, and quality checks.
+
+The systems accelerated work that would have been unrealistic to repeat manually at the same breadth: comparing historical and current sources, tracing transformations, generating and testing repair code, reviewing dozens of rendered pages, rebuilding contextual sampling frames, evaluating forecasting alternatives, and maintaining a publication ledger across code, evidence, prose, and design.
+
+That acceleration did not make every output correct. Agent proposals were hypotheses until they matched the pinned data and passed review. Generated code was subject to tests. Generated prose was subject to source and claim review. A successful render established that a file could be produced; it did not establish that the human or analytical interpretation was true.
+
+## A contribution and acceptance ledger
+
+| Phase | Operator contribution | AI contribution | Acceptance evidence |
+|---|---|---|---|
+| Original work | Question, scope, coursework decisions, source selection, initial analysis | GPT-3 and Claude Opus 4 contributions identified by the owner | Archived reports, source files, and owner account |
+| Evidence repair | Analytical priorities, correction requirements, claim boundaries, approval gates | Data audits, acquisition and analysis code, tests, reconciliation, model comparisons | Pinned manifests, hashes, automated tests, and reviewed findings |
+| Public report | Byline, narrative purpose, sensitive-content rules, final judgments | Figure production, layout, draft prose, PDF and web implementation | Numerical reconciliation and rendered-page review |
+| Kindle edition | Approval to publish, disclosure choices, credits, pricing and access strategy | Cover system, front matter, eBook conversion, accessibility and package checks | EPUB/KPF validation and owner review in Amazon tooling |
+
+The ledger is intentionally role-based. Vendor names do not explain authorship, and model availability alone does not establish contribution. Where task records are retained, they are the preferred source for assigning a model to a specific action.
+
+## What the agents could not decide
+
+No model could decide why this project mattered to its author, which errors deserved candid public treatment, how much personal context could be disclosed, whether a sensitive demographic chart should remain, or when the evidence was sufficient to carry the author's name. The agents could recommend wording and safeguards. They could not grant themselves permission to publish, convert a candidate result into an approved claim, or assume responsibility for the consequences.
+
+The author likewise did not perform every mechanical step alone. The completed edition depends on a volume of iterative inspection, code generation, comparison, and document production that the earlier one-person course schedule could not sustain. AI assistance changed what was practically achievable, but it did not remove the need to understand and defend the result.
+
+## The counterfactual
+
+This edition is neither the output of a person pressing a button nor the output of an autonomous model. Remove the operator and there is no original inquiry, source archive, research purpose, contextual judgment, acceptance standard, approval, or accountable interpretation. Remove the AI systems and the rebuild does not reach its present breadth, speed, or density of iterative checking within the available time.
+
+The dependence is real but not symmetrical. The agents supplied scale, alternatives, and production capacity. Arthur Dominic Blanc supplied authority, direction, context, and responsibility. If either side had been absent, this report would not exist in its present form.
+
+## Responsibility after collaboration
+
+Arthur Dominic Blanc is the author, final editor, and publisher of this edition. He is responsible for verifying the public claims, correcting errors, and deciding whether the report should remain available. AI systems are credited contributors and production tools; they are not rights holders, accountable publishers, or institutional endorsers.
+
+\clearpage
+
+# Acknowledgments and credits {-}
+
+## Educational context
+
+This report originated in the Master of Science in Data Science program at the University of Colorado Boulder. The university provided the educational setting for the original work. The present edition is independently published and should not be read as a university-reviewed or university-endorsed publication.
+
+## Software and analytical foundations
+
+The analysis and publication workflow used [R](https://www.r-project.org/), the [RStudio](https://posit.co/products/open-source/rstudio/) integrated development environment, Python, Pandoc, XeLaTeX, and the open-source packages recorded in the reproducibility files. R is maintained by the R Core Team with support from the R Foundation for Statistical Computing. RStudio is developed by Posit PBC. The report also depends on the maintainers of its R and Python libraries, test frameworks, rendering tools, and geospatial stack.
+
+## AI systems and agents
+
+- **OpenAI GPT-3** - credited by the owner for assistance with the original report.
+- **Anthropic Claude Opus 4** - credited by the owner for subsequent work on the original report and its material.
+- **Arthur Dominic Blanc's Codex-1 agent** - the author's named agent/workflow for maintaining context, provenance, and delegated technical work; this is an owner-defined agent name rather than a claim that “Codex-1” is an official vendor model name.
+- **OpenAI Codex and GPT-5.6 Sol, GPT-5.6 Terra, and GPT-5.6 Luna** - credited for the multi-stage rebuild, validation, design, writing, and publication workflow under the operator's direction.
+
+OpenAI and Anthropic did not sponsor, review, or endorse the report. Product and model names are used only to describe the tools credited by the author.
+
+## Data and public-source contributors
+
+The report acknowledges the people who collect, maintain, document, and publish the NYC Open Data tables, Census and ACS products, NOAA weather record, federal holiday rules, championship schedules, Crowd Counting Consortium datasets, and supporting geographic resources cited in the references. Their publication of source material makes independent scrutiny possible; it does not make them responsible for this report's analysis.
+
+## Final responsibility statement
+
+AI systems did not choose the research question, own the source material, approve claims, or authorize publication. Arthur Dominic Blanc set the objectives, supplied the original work and context, directed the agents, accepted or rejected changes, and retains responsibility for the published edition. The scale and speed of the rebuild depended on AI assistance; its purpose, evidentiary standards, and final judgments depended on the human operator. Remove either contribution and this edition would not exist in its present form.
+
+\clearpage
+
+# References {-}
+
+- New York City Police Department. [Shootings (2006-Present), dataset 5ucz-vwe8](https://data.cityofnewyork.us/d/5ucz-vwe8). Snapshot retrieved `r snapshot_retrieved`.
+- New York City Police Department. [Shooting Victims (2006-Present), dataset pztn-9bne](https://data.cityofnewyork.us/d/pztn-9bne). Snapshot retrieved `r snapshot_retrieved`.
+- New York City Police Department. [Shooting Offenders (2006-Present), dataset gdk4-mbsv](https://data.cityofnewyork.us/d/gdk4-mbsv). Snapshot retrieved `r snapshot_retrieved`.
+- New York City Department of City Planning. [2020 Census Results for New York City: Key Population and Housing Characteristics](https://www.nyc.gov/assets/planning/downloads/pdf/our-work/reports/dcp_2020-census-briefing-booklet-1.pdf).
+- United States Census Bureau. [2020 Census TIGERweb Census Tracts](https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Census2020/MapServer/6), January 1 2020 vintage.
+- United States Census Bureau. [2020 ACS 5-year table-based summary files](https://www.census.gov/programs-surveys/acs/data/summary-file.2020.html), detailed tables B01003 and B19013.
+- Keefe, John. [NYC Police Precinct and Census Data](https://johnkeefe.net/nyc-police-precinct-and-census-data), 2020 Census block aggregation to precinct geography; used only for the maintained 2020 precinct-rate table.
+- National Oceanic and Atmospheric Administration, National Centers for Environmental Information. [Daily Summaries for NY City Central Park, station USW00094728](https://www.ncei.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00094728/detail). Metric daily snapshot retrieved `r contextual_retrieved`.
+- United States Office of Personnel Management. [Federal Holidays: Work Schedules and Pay](https://www.opm.gov/policy-data-oversight/pay-leave/pay-administration/fact-sheets/holidays-work-schedules-and-pay/). Calendar rules used to generate actual and observed dates.
+- ESPN. [NBA scoreboard schedule endpoint](https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard) and [NFL scoreboard schedule endpoint](https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard). Request-level URLs and hashes are preserved in the contextual manifest.
+- Major League Baseball. [MLB Stats API schedule endpoint](https://statsapi.mlb.com/api/v1/schedule). World Series request URLs and hashes are preserved in the contextual manifest.
+- Chenoweth, Erica; Pressman, Jeremy; and Ulfelder, Jay. [Crowd Counting Consortium U.S. Protest Event Data, 2017-2020](https://doi.org/10.7910/DVN/6OPP7H), Harvard Dataverse, version 1.1.
+- Chenoweth, Erica; Hammam, Soha; Pressman, Jeremy; and Ulfelder, Jay. [Crowd Counting Consortium U.S. Protest Event Data, 2021-2024](https://doi.org/10.7910/DVN/9MMYDI), Harvard Dataverse, version 2.1.
+- Chenoweth, Erica; Hammam, Soha; Pressman, Jeremy; Shay, Christopher; and Ulfelder, Jay. [Crowd Counting Consortium U.S. Protest Event Data, 2025-](https://doi.org/10.7910/DVN/RI9JFU), Harvard Dataverse, version 18.0; analysis restricted to 2025.
+- Hyndman, Rob J.; and Athanasopoulos, George. [Time series cross-validation](https://otexts.com/fpp3/tscv.html), *Forecasting: Principles and Practice*, third edition. Rolling-origin guidance used for the 14/28-day evaluation design.
+- Taylor, Sean J.; and Letham, Benjamin. [Forecasting at Scale](https://facebook.github.io/prophet/static/prophet_paper_20170113.pdf). Prophet retained as the original model and evaluated under the common rolling protocol.
+- Chen, Tianqi; and Guestrin, Carlos. [XGBoost: A Scalable Tree Boosting System](https://doi.org/10.1145/2939672.2939785). The bounded tree-boosting inquiry is not promoted for Part 1; the contextual XGBoost v2 design is reserved for a separate document.
+- Bollerslev, Tim. [Generalized autoregressive conditional heteroskedasticity](https://doi.org/10.1016/0304-4076(86)90063-1). GARCH is discussed as a volatility model rather than mislabelled as a daily count-mean model.
+- Microsoft. [Azure SQL documentation](https://learn.microsoft.com/en-us/azure/azure-sql/). Used for the conditional managed-relational-platform feasibility assessment; no Azure resource was created.
+- Maintained project evidence: `analysis/revamp/results/`, generated from the pinned snapshot and validated by `analysis/revamp/test_analysis.py`.
+
+\appendix
+
+# Snapshot checksums
+
+The full SHA-256 values identify the exact CSV files used by the maintained analysis.
+
+```{r checksum-table, results='asis'}
+hash_display <- hash_table
+if (report_is_latex) {
+  hash_display$SHA256 <- paste0("\\texttt{\\scriptsize ", hash_display$SHA256, "}")
+}
+names(hash_display) <- c("Dataset", "NYC Open Data ID", "SHA-256")
+knitr::kable(
+  hash_display,
+  format = report_table_format,
+  booktabs = report_is_latex,
+  align = c("l", "l", "l"),
+  escape = !report_is_latex
+)
+```
+
+```{r contextual-checksum-table, results='asis'}
+contextual_hash_display <- data.frame(
+  Dataset = c("Weather", "Federal holidays", "Championship games", "Political crowds"),
+  SHA256 = c(
+    contextual_manifest$files$weather$sha256,
+    contextual_manifest$files$holidays$sha256,
+    contextual_manifest$files$sports$sha256,
+    contextual_manifest$files$political_events$sha256
+  ),
+  stringsAsFactors = FALSE
+)
+if (report_is_latex) {
+  contextual_hash_display$SHA256 <- paste0(
+    "\\texttt{\\scriptsize ", contextual_hash_display$SHA256, "}"
+  )
+}
+knitr::kable(
+  contextual_hash_display,
+  format = report_table_format,
+  booktabs = report_is_latex,
+  caption = "Pinned contextual files.",
+  align = c("l", "l"),
+  escape = !report_is_latex
+)
+```
+
+# Rendering environment
+
+```{r rendering-environment, results='asis'}
+environment_table <- data.frame(
+  Component = c("R", "Pandoc", "TeX engine", "Dependency lock", "Analysis tests"),
+  Foundation = c(
+    paste(R.version$major, R.version$minor, sep = "."),
+    as.character(rmarkdown::pandoc_version()),
+    "XeLaTeX / TeX Live 2026", "renv.lock", "analysis/revamp/test_analysis.py"
+  )
+)
+knitr::kable(
+  environment_table,
+  format = report_table_format,
+  booktabs = report_is_latex,
+  align = c("l", "l")
+)
+```
+
+The R Markdown source reads maintained CSV and JSON outputs; it does not recreate the Python cleaning and analytical pipeline. Required outputs are checked at render time, and core totals must reconcile before the document can compile.
+
+# Publication boundary
+
+```{r step-boundary-table, results='asis'}
+step_boundary <- data.frame(
+  Status = c("Part 1 complete", "Part 2 separate document"),
+  Content = c(
+    "Data contract; annual and YTD change; temporal variation; 2020 borough and tract comparisons; location descriptions and mapped density; fatality drill-downs; victim and known-offender distributions; contextual associations; preferred dynamic count forecast; Prophet and comparison models; current-report infrastructure feasibility; limitations and conclusion",
+    "Contextual source inventory; historical and streaming data engineering; point-in-time feature construction; spatiotemporal XGBoost v2 design; infrastructure and governance required by that expanded question"
+  ),
+  stringsAsFactors = FALSE
+)
+knitr::kable(
+  step_boundary,
+  format = report_table_format,
+  booktabs = report_is_latex,
+  align = if (report_is_latex) c("l", "p{10.2cm}") else c("l", "l")
+)
+```
+
+\clearpage
+
+# About the author {-}
+
+Arthur Dominic Blanc is the author and operator of this report. He developed the original analysis during graduate study in data science and later directed its reconstruction into the present independent edition. His role in the rebuild included research direction, source and disclosure decisions, agent supervision, claim approval, and final editorial responsibility.
+
+# Corrections, accessibility, and edition history {-}
+
+## Corrections
+
+The preferred correction channel is the public project repository at [github.com/vectorforge22/NYPD-Shooting-Data-Analysis-Report](https://github.com/vectorforge22/NYPD-Shooting-Data-Analysis-Report). Corrections should identify the edition date, the affected claim or figure, and the evidence supporting the proposed change. A later source-data refresh should be issued as a new dated edition rather than silently changing the meaning of this snapshot.
+
+## Accessibility
+
+The Kindle edition uses real text, semantic headings, linked navigation, high-contrast figures, and textual interpretation adjacent to the charts. Colour is not intended to be the sole carrier of a conclusion. The fixed-layout PDF preserves the visual report, while the reflowable edition allows readers to adjust type size and reading settings. Source tables and reproducibility material remain available through the project repository.
+
+## Edition history
+
+- **Original coursework report, 25 January 2025:** historical source retained for provenance.
+- **Revised publication edition, 18 September 2026:** corrected analytical units; refreshed official data through 30 June 2026; completed contextual analyses and forecast evaluation; added public-facing limitations, AI collaboration disclosure, credits, and Kindle publication structure.

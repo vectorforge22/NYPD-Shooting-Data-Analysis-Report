@@ -1,0 +1,7 @@
+period_family,period,start_year,end_year,basis,years,incidents,annual_mean_incidents,first_year_incidents,last_year_incidents,first_to_last_change_pct,ols_slope_incidents_per_year,victims,victims_per_incident,fatal_victims
+context,pre_2020_decline,2006,2019,Context-defined pre-2020 period,14,17034,1216.7142857142858,1566,777,-50.38314176245211,-66.64615384615057,20326,1.1932605377480334,3377
+context,2020_2021_discontinuity,2020,2021,Context-defined discontinuity period,2,3094,1547.0,1532,1562,1.95822454308094,29.999999999996717,3745,1.2104072398190044,617
+context,post_2021_decline,2022,2025,Context-defined post-2021 period,4,3860,965.0,1294,688,-46.831530139103556,-188.8000000000049,4675,1.211139896373057,787
+sensitivity,early_decline,2006,2012,Best-BIC segmented-linear sensitivity,7,10304,1472.0,1566,1373,-12.324393358876119,-17.500000000000338,12355,1.1990489130434783,2114
+sensitivity,later_pre_2020_decline,2013,2019,Best-BIC segmented-linear sensitivity,7,6730,961.4285714285714,1103,777,-29.55575702629193,-77.25000000000638,7971,1.1843982169390788,1263
+sensitivity,2020_onward,2020,2025,Best-BIC segmented-linear sensitivity,6,6954,1159.0,1532,688,-55.09138381201044,-186.11428571427717,8420,1.2108139200460166,1404

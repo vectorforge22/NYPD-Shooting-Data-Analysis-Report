@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: If you use this report or its maintained analysis, please cite it as follows.
+title: NYPD Shooting Incidents
+version: 2026-09-18
+date-released: 2026-09-18
+type: report
+authors:
+  - family-names: Blanc
+    given-names: Arthur Dominic
+repository-code: https://github.com/vectorforge22/NYPD-Shooting-Data-Analysis-Report
+abstract: An exploratory analysis and forecast evaluation of NYPD-recorded shooting incidents, including repaired analytical units, contextual associations, and chronological forecast tests.
+license: proprietary

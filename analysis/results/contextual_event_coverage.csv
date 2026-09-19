@@ -1,0 +1,4 @@
+dataset,start_date,end_date,records,distinct_days
+federal_holidays,2006-01-01,2025-12-25,205,205
+championship_games,2006-02-05,2025-11-01,249,249
+political_crowds,2017-01-04,2025-12-31,15016,2648

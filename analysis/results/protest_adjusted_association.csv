@@ -1,0 +1,2 @@
+universe,start_date,end_date,calendar_days,event_days,non_event_days,incidence_rate_ratio,lower_95,upper_95,coefficient_log_rate,robust_standard_error,model
+CCC-recorded NYC political crowd days,2017-01-01,2025-12-31,3287,2648,639,1.148666368023298,1.0399825922050372,1.268708183115148,0.13860158944626935,0.05071306872319478,"Poisson log-link with year, month, and weekday fixed effects; 14-day HAC uncertainty"

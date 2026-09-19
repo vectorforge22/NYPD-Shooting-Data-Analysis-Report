@@ -1,0 +1,7 @@
+metric,count
+shooting_incidents_2020,1532
+incidents_with_valid_coordinates,1532
+incidents_assigned_to_2020_tract,1532
+incidents_unassigned_to_2020_tract,0
+nyc_tracts_in_geometry,2327
+tracts_eligible_for_income_analysis,2206

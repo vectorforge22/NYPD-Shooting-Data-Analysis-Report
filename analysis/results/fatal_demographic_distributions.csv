@@ -1,0 +1,31 @@
+entity,field,value,status,count,share_of_records
+fatal_victim,age_group,25-44,recorded,2527,0.5285505124450952
+fatal_victim,age_group,18-24,recorded,1446,0.3024471867810082
+fatal_victim,age_group,45-64,recorded,440,0.09203095586697344
+fatal_victim,age_group,<18,recorded,301,0.0629575402635432
+fatal_victim,age_group,65+,recorded,59,0.012340514536707802
+fatal_victim,age_group,Unknown or missing,missing_or_unknown,8,0.0016732901066722444
+fatal_victim,recorded_sex,MALE,recorded,4386,0.9173813009830579
+fatal_victim,recorded_sex,FEMALE,recorded,395,0.08261869901694206
+fatal_victim,recorded_race,BLACK,recorded,3428,0.7170048107090566
+fatal_victim,recorded_race,WHITE HISPANIC,recorded,707,0.1478770131771596
+fatal_victim,recorded_race,BLACK HISPANIC,recorded,374,0.07822631248692742
+fatal_victim,recorded_race,WHITE,recorded,172,0.035975737293453255
+fatal_victim,recorded_race,ASIAN / PACIFIC ISLANDER,recorded,96,0.02007948128006693
+fatal_victim,recorded_race,Unknown or missing,missing_or_unknown,4,0.0008366450533361222
+linked_known_offender,age_group,25-44,recorded,1826,0.43925908106807793
+linked_known_offender,age_group,18-24,recorded,1599,0.38465239355304304
+linked_known_offender,age_group,<18,recorded,348,0.0837142169834015
+linked_known_offender,age_group,45-64,recorded,241,0.05797450084195333
+linked_known_offender,age_group,Unknown or missing,missing_or_unknown,120,0.028866971373586722
+linked_known_offender,age_group,65+,recorded,22,0.005292278085157566
+linked_known_offender,age_group,1822,invalid_recorded_value,1,0.00024055809477988935
+linked_known_offender,recorded_sex,MALE,recorded,3922,0.943468847726726
+linked_known_offender,recorded_sex,FEMALE,recorded,132,0.031753668510945396
+linked_known_offender,recorded_sex,Unknown or missing,missing_or_unknown,103,0.024777483762328602
+linked_known_offender,recorded_race,BLACK,recorded,2871,0.6906422901130623
+linked_known_offender,recorded_race,WHITE HISPANIC,recorded,694,0.1669473177772432
+linked_known_offender,recorded_race,BLACK HISPANIC,recorded,319,0.0767380322347847
+linked_known_offender,recorded_race,Unknown or missing,missing_or_unknown,114,0.027423622804907385
+linked_known_offender,recorded_race,WHITE,recorded,105,0.02525859995188838
+linked_known_offender,recorded_race,ASIAN / PACIFIC ISLANDER,recorded,54,0.012990137118114024

@@ -1,0 +1,3 @@
+universe,category,matched_event_days,event_incidents_per_day,matched_control_incidents_per_day,paired_difference,difference_lower_95,difference_upper_95,event_to_control_ratio,ratio_lower_95,ratio_upper_95,bootstrap_replicates,seed
+CCC-recorded NYC political crowd days,All included dates,638,2.189655172413793,2.093478504254366,0.09617666815942716,-0.04789390207493667,0.2431274257351839,1.0459410822532818,0.9777470153401466,1.1176762548276369,2000,20260918
+CCC-recorded NYC political crowd days,Political crowd day,638,2.189655172413793,2.093478504254366,0.09617666815942716,-0.05084065718764019,0.250347579862666,1.0459410822532818,0.9761326885319692,1.1220855925379563,2000,20260918

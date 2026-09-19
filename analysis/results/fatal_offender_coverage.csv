@@ -1,0 +1,6 @@
+metric,count
+fatal_victim_records,4781
+fatal_incidents,4619
+fatal_incidents_with_linked_known_offender,3040
+fatal_incidents_without_linked_known_offender,1579
+distinct_linked_known_offender_records,4157

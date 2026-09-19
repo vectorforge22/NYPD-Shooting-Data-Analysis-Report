@@ -1,0 +1,2 @@
+method,tracts,rho,bootstrap_lower_95,bootstrap_upper_95,bootstrap_replicates,seed
+Spearman rank correlation across eligible Census tracts,2206,-0.37113398217545324,-0.4093936212052653,-0.3335519872054569,2000,20260917
