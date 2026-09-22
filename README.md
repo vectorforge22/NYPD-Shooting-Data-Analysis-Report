@@ -2,6 +2,8 @@
 
 <img src="./assets/NYPD_Shooting_Incidents_Kindle_Cover.jpg" alt="NYPD Shooting Incidents Cover Image" width="300">
 
+> Now available on Amazon! [https://www.amazon.com/dp/B0HKL4SBKK](https://www.amazon.com/dp/B0HKL4SBKK)
+
 This public repository contains the reproducible evidence, report source, and release material for *NYPD Shooting Incidents: Exploratory Analysis and Forecast Evaluation* by Arthur Dominic Blanc.
 
 The project began as graduate coursework and was rebuilt as an independent publication. The maintained edition corrects an incident-versus-victim unit error, refreshes official data through 30 June 2026, separates incident, victim, and known-offender records, and evaluates forecasting methods on chronological holdouts.
